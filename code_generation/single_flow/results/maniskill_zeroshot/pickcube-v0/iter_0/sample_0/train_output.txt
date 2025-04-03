@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/home/yy/text2reward/code_generation/single_flow/train.py", line 69, in <module>
+    train(args) 
+  File "/home/yy/text2reward/code_generation/single_flow/train.py", line 35, in train
+    env = make_env(args.task, args.reward_file)
+  File "/home/yy/text2reward/code_generation/single_flow/train.py", line 28, in make_env
+    env = gym.make(env_name)
+  File "/home/yy/miniconda3/envs/text2reward/lib/python3.7/site-packages/gymnasium/envs/registration.py", line 740, in make
+    env_spec = _find_spec(id)
+  File "/home/yy/miniconda3/envs/text2reward/lib/python3.7/site-packages/gymnasium/envs/registration.py", line 537, in _find_spec
+    _check_version_exists(ns, name, version)
+  File "/home/yy/miniconda3/envs/text2reward/lib/python3.7/site-packages/gymnasium/envs/registration.py", line 403, in _check_version_exists
+    _check_name_exists(ns, name)
+  File "/home/yy/miniconda3/envs/text2reward/lib/python3.7/site-packages/gymnasium/envs/registration.py", line 381, in _check_name_exists
+    f"Environment `{name}` doesn't exist{namespace_msg}.{suggestion_msg}"
+gymnasium.error.NameNotFound: Environment `PickCube` doesn't exist.

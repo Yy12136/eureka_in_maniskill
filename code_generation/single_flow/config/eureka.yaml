@@ -1,0 +1,17 @@
+env:
+  task: "LiftCube-v0"  # 默认任务
+  env_name: "reward_env"
+  map_dict: {}  # 将在代码中动态设置
+
+save_dir: "results"  # 保存结果的目录
+
+model:
+  name: "deepseek-v3-241226"
+  temperature: 0.7
+
+# 基本配置
+iteration: 3  # 总迭代次数
+sample: 5     # 每次迭代的样本数
+max_iterations: 1000  # 每个样本的最大训练步数
+use_wandb: false     # 是否使用 wandb 记录
+headless: true      # 是否使用无头模式

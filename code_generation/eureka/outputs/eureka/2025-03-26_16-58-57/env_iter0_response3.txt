@@ -1,0 +1,64 @@
+Importing module 'gym_38' (/home/yy/isaacgym/python/isaacgym/_bindings/linux-x86_64/gym_38.so)
+Setting GYM_USD_PLUG_INFO_PATH to /home/yy/isaacgym/python/isaacgym/_bindings/linux-x86_64/usd/plugInfo.json
+PyTorch version 2.0.0+cu117
+Device count 1
+/home/yy/isaacgym/python/isaacgym/_bindings/src/gymtorch
+Using /home/yy/.cache/torch_extensions/py38_cu117 as PyTorch extensions root...
+Emitting ninja build file /home/yy/.cache/torch_extensions/py38_cu117/gymtorch/build.ninja...
+Building extension module gymtorch...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module gymtorch...
+Traceback (most recent call last):
+  File "<frozen importlib._bootstrap_external>", line 1346, in _path_importer_cache
+KeyError: '/home/yy/miniconda3/envs/issacgym/lib/python3.8/site-packages/scipy/constants'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/yy/Eureka/eureka/../isaacgymenvs/isaacgymenvs/train.py", line 39, in <module>
+    from isaacgymenvs.tasks import isaacgym_task_map
+  File "/home/yy/Eureka/isaacgymenvs/isaacgymenvs/tasks/__init__.py", line 31, in <module>
+    from .anymal_terrain import AnymalTerrain
+  File "/home/yy/Eureka/isaacgymenvs/isaacgymenvs/tasks/anymal_terrain.py", line 542, in <module>
+    from isaacgym.terrain_utils import *
+  File "/home/yy/isaacgym/python/isaacgym/terrain_utils.py", line 11, in <module>
+    from scipy import interpolate
+  File "<frozen importlib._bootstrap>", line 1039, in _handle_fromlist
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/site-packages/scipy/__init__.py", line 200, in __getattr__
+    return _importlib.import_module(f'scipy.{name}')
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/site-packages/scipy/interpolate/__init__.py", line 167, in <module>
+    from ._interpolate import *
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/site-packages/scipy/interpolate/_interpolate.py", line 12, in <module>
+    from . import _fitpack_py
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/site-packages/scipy/interpolate/_fitpack_py.py", line 10, in <module>
+    from ._bsplines import BSpline
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/site-packages/scipy/interpolate/_bsplines.py", line 8, in <module>
+    from scipy.optimize import minimize_scalar
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/site-packages/scipy/optimize/__init__.py", line 425, in <module>
+    from ._shgo import shgo
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/site-packages/scipy/optimize/_shgo.py", line 9, in <module>
+    from scipy import spatial
+  File "<frozen importlib._bootstrap>", line 1039, in _handle_fromlist
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/site-packages/scipy/__init__.py", line 200, in __getattr__
+    return _importlib.import_module(f'scipy.{name}')
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/site-packages/scipy/spatial/__init__.py", line 118, in <module>
+    from . import distance, transform
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/site-packages/scipy/spatial/transform/__init__.py", line 19, in <module>
+    from ._rotation import Rotation, Slerp
+  File "_rotation.pyx", line 5, in init scipy.spatial.transform._rotation
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/site-packages/scipy/spatial/transform/_rotation_groups.py", line 2, in <module>
+    from scipy.constants import golden as phi
+  File "/home/yy/miniconda3/envs/issacgym/lib/python3.8/site-packages/scipy/constants/__init__.py", line 320, in <module>
+    from ._codata import *
+  File "<frozen importlib._bootstrap>", line 991, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 971, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 914, in _find_spec
+  File "<frozen importlib._bootstrap_external>", line 1407, in find_spec
+  File "<frozen importlib._bootstrap_external>", line 1376, in _get_spec
+  File "<frozen importlib._bootstrap_external>", line 1348, in _path_importer_cache
+KeyboardInterrupt

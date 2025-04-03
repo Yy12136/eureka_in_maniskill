@@ -1,0 +1,2 @@
+Reward: 0.5331861536264554
+Feedback: Iteration 1, Sample 0: Better performance achieved (reward: 0.533). Good improvements in: intermediate goals and stability.

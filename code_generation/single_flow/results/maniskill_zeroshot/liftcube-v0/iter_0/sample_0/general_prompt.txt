@@ -1,0 +1,12 @@
+
+            Generate a general reward function for robotic manipulation:
+            Pick up cube A and lift it up by 0.2 meter.
+            
+            The reward function should:
+            1. Be sparse but meaningful
+            2. Focus on task completion
+            3. Be applicable to similar tasks
+            
+            Use the same variables as before.
+            Return the reward function code only.
+            

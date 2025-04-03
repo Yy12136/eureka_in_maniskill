@@ -1,0 +1,66 @@
+{
+  "os": "Linux-5.15.0-134-generic-x86_64-with-debian-bullseye-sid",
+  "python": "3.7.16",
+  "startedAt": "2025-03-31T14:22:00.991856Z",
+  "args": [
+    "--env_id",
+    "LiftCube-v0",
+    "--train_num",
+    "8",
+    "--eval_num",
+    "5",
+    "--eval_freq",
+    "12800",
+    "--max_episode_steps",
+    "100",
+    "--rollout_steps",
+    "3200",
+    "--train_max_steps",
+    "2_000_000",
+    "--seed",
+    "0",
+    "--eval_seed",
+    "1",
+    "--reward_path",
+    "./reward_code/zero-shot/LiftCube-v0/specific.py",
+    "--exp_name",
+    "zero-shot"
+  ],
+  "program": "ppo.py",
+  "codePath": "run_maniskill/ppo.py",
+  "git": {
+    "remote": "https://github.com/xlang-ai/text2reward.git",
+    "commit": "e7f57efcf76b22bbfb7c3eb9d67d98ff2765a926"
+  },
+  "root": "/home/yy/text2reward/run_maniskill",
+  "host": "yydsg",
+  "username": "yy",
+  "executable": "/home/yy/miniconda3/envs/text2reward/bin/python",
+  "codePathLocal": "ppo.py",
+  "cpu_count": 8,
+  "cpu_count_logical": 16,
+  "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "97821614080",
+      "used": "25435193344"
+    }
+  },
+  "memory": {
+    "total": "16608067584"
+  },
+  "cpu": {
+    "count": 8,
+    "countLogical": 16
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA GeForce RTX 3060 Laptop GPU",
+      "memoryTotal": "6442450944",
+      "cudaCores": 3840,
+      "architecture": "Ampere"
+    }
+  ],
+  "cudaVersion": "12.2"
+}

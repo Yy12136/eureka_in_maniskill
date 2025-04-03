@@ -1,0 +1,4 @@
+- env=cartpole
+- sample=4
+- iteration=2
+- ++task.env.numEnvs=64

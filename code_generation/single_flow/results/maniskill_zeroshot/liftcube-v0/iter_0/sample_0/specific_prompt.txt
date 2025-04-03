@@ -1,0 +1,19 @@
+
+            Generate a specific reward function for the following task:
+            Pick up cube A and lift it up by 0.2 meter.
+            
+            The reward function should:
+            1. Be dense and informative
+            2. Guide the robot through each step
+            3. Include specific milestones for the task
+            
+            Available variables:
+            - self.robot.qpos: Robot joint positions
+            - self.robot.qvel: Robot joint velocities
+            - self.robot.ee_pose: End-effector pose
+            - self.robot.check_grasp: Grasp check function
+            - self.cubeA: Target cube object
+            - self.cubeA.check_static(): Static check function
+            
+            Return the reward function code only.
+            
