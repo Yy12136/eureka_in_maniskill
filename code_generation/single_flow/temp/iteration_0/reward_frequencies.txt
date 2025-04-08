@@ -1,0 +1,7 @@
+奖励项出现频率（从高到低）：
+reward_lift: 1.000
+reward_grasp: 1.000
+reward_control: 0.800
+reward_stability: 0.600
+reward_static: 0.400
+reward_effort: 0.200

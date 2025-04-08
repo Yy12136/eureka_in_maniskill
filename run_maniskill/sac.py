@@ -16,6 +16,8 @@ from scipy.spatial.distance import cdist
 from mani_skill2.utils.sapien_utils import (check_actor_static, get_entity_by_name)
 from transforms3d.quaternions import qinverse, qmult, quat2axangle
 
+# 在文件开头添加基础路径
+BASE_DIR = "/home/yy/text2reward/results"
 
 class ContinuousTaskWrapper(gym.Wrapper):
     def __init__(self, env, max_episode_steps: int) -> None:
@@ -140,7 +142,7 @@ if __name__ == '__main__':
         assert (0)
 
     # set up eval environment
-    eval_env = SubprocVecEnv([make_env(args.env_id, record_dir="logs/videos") for i in range(args.eval_num)])
+    eval_env = SubprocVecEnv([make_env(args.env_id, record_dir=f"{BASE_DIR}/videos") for i in range(args.eval_num)])
     eval_env = VecMonitor(eval_env)
     eval_env.seed(args.seed)
     eval_env.reset()
@@ -153,21 +155,36 @@ if __name__ == '__main__':
     obs = env.reset()
 
     # set up callback
-    eval_callback = EvalCallback(eval_env, best_model_save_path="./logs/", log_path="./logs/",
-                                 eval_freq=args.eval_freq // args.train_num, deterministic=True, render=False,
-                                 n_eval_episodes=10)
+    eval_callback = EvalCallback(
+        eval_env, 
+        best_model_save_path=f"{BASE_DIR}/models/",
+        log_path=f"{BASE_DIR}/logs/",
+        eval_freq=args.eval_freq // args.train_num,
+        deterministic=True,
+        render=False,
+        n_eval_episodes=10
+    )
     set_random_seed(args.seed)
 
     # set up sac algorithm
     policy_kwargs = dict(net_arch=[256, 256])
-    model = SAC("MlpPolicy", env, policy_kwargs=policy_kwargs, verbose=1, batch_size=1024, gamma=0.95,
-                learning_starts=4000, ent_coef='auto_0.2', train_freq=8, gradient_steps=4, tensorboard_log="./logs")
+    model = SAC("MlpPolicy", env, 
+        policy_kwargs=policy_kwargs,
+        verbose=1,
+        batch_size=1024,
+        gamma=0.95,
+        learning_starts=4000,
+        ent_coef='auto_0.2',
+        train_freq=8,
+        gradient_steps=4,
+        tensorboard_log=f"{BASE_DIR}/tensorboard"
+    )
     model.learn(args.train_max_steps, callback=[eval_callback])
-    model.save("./logs/latest_model_" + args.env_id[:-3] + "-our")
+    model.save(f"{BASE_DIR}/models/latest_model_{args.env_id[:-3]}-our")
 
     # set up model evaluation environment
     eval_env.close()
-    record_dir = "logs/eval_videos_" + args.env_id[:-3] + "-our"
+    record_dir = f"{BASE_DIR}/eval_videos_{args.env_id[:-3]}-our"
     eval_env = SubprocVecEnv([make_env(args.env_id, record_dir=record_dir) for i in range(1)])
     eval_env = VecMonitor(eval_env)
     eval_env.seed(args.eval_seed)

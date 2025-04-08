@@ -183,11 +183,32 @@ class ZeroShotGenerator:
                 available_vars=available_vars
             )
             
-            specific_response = self.client.chat.completions.create(
-                model="deepseek-v3-241226",
-                messages=[{"role": "user", "content": specific_prompt}]
-            )
-            specific_code = specific_response.choices[0].message.content
+            # 使用不同温度生成多个响应
+            temperatures = [0.0, 0.3, 0.5, 0.7, 1.0]
+            specific_code = None
+            
+            for temp in temperatures:
+                try:
+                    response = self.client.chat.completions.create(
+                        model="deepseek-v3-241226",
+                        messages=[{"role": "user", "content": specific_prompt}],
+                        temperature=temp
+                    )
+                    code = response.choices[0].message.content
+                    if "def compute_dense_reward" in code:
+                        specific_code = code
+                        break
+                except Exception as e:
+                    print(f"温度 {temp} 生成失败: {e}")
+                    continue
+            
+            if specific_code is None:
+                # 如果所有温度都失败，使用默认温度重试一次
+                response = self.client.chat.completions.create(
+                    model="deepseek-v3-241226",
+                    messages=[{"role": "user", "content": specific_prompt}]
+                )
+                specific_code = response.choices[0].message.content
             
             general_prompt = GENERAL_REWARD_TEMPLATE.format(
                 instruction=instruction
@@ -224,7 +245,7 @@ def compute_dense_reward(self, action) -> float:
                         function_code = "import numpy as np\n\n" + function_code
                     return function_code
                 return code_template  # 如果没找到代码块，返回模板
-                
+            
             # 处理生成的代码
             if specific_code:
                 specific_code = extract_function(specific_code)

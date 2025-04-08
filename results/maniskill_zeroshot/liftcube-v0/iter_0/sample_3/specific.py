@@ -5,40 +5,40 @@ def compute_dense_reward(self, action) -> float:
     weight_grasp = 0.3
     weight_lift = 0.4
     weight_stability = 0.2
-    weight_effort = 0.1
+    weight_control = 0.1
     
     # Initialize components
-    reward_grasp = 0.0  # Reward for successfully grasping cube A
-    reward_lift = 0.0   # Reward for lifting cube A by 0.2 meters
+    reward_grasp = 0.0  # Reward for successful grasping of cube A
+    reward_lift = 0.0  # Reward for lifting cube A by 0.2 meters
     reward_stability = 0.0  # Reward for maintaining stability during the task
-    reward_effort = 0.0  # Reward for minimizing effort (joint velocity)
+    reward_control = 0.0  # Reward for minimizing control effort
     
-    # Calculate reward for grasping
+    # Calculate each component
+    
+    # Grasping reward
     if self.agent.check_grasp(self.obj):
         reward_grasp = 1.0
     
-    # Calculate reward for lifting
-    ee_pose = self.tcp.pose
-    cube_height = ee_pose[2] - 0.02
-    if cube_height >= 0.2:
-        reward_lift = 1.0
-    else:
-        reward_lift = cube_height / 0.2  # Linear scaling based on height
+    # Lifting reward
+    cube_height = self.obj.pose.p[2] - 0.02
+    target_height = 0.2
+    height_diff = abs(cube_height - target_height)
+    reward_lift = max(0, 1 - height_diff / target_height)
     
-    # Calculate reward for stability
+    # Stability reward
     if check_actor_static(self.obj):
         reward_stability = 1.0
     
-    # Calculate reward for effort (minimize joint velocity)
-    joint_velocities = self.agent.robot.get_qvel()[:-2]
-    reward_effort = 1.0 - (np.linalg.norm(joint_velocities) / 10.0)  # Normalize by max expected velocity
+    # Control effort reward
+    control_effort = sum(abs(self.agent.robot.get_qvel()[:-2])) + sum(abs(action))
+    reward_control = max(0, 1 - control_effort / 10.0)  # Normalize control effort
     
     # Combine all rewards
     reward = (
         weight_grasp * reward_grasp +
         weight_lift * reward_lift +
         weight_stability * reward_stability +
-        weight_effort * reward_effort
+        weight_control * reward_control
     )
     
     return reward

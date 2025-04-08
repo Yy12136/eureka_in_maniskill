@@ -1,1 +1,1 @@
-[["reward_approach", "reward_grasp", "reward_lift"], ["reward_grasp", "reward_lift", "reward_stability"], ["reward_grasp", "reward_lift", "reward_stability"], ["reward_grasp", "reward_lift", "reward_stability"], []]
+[["reward_effort", "reward_grasp", "reward_lift", "reward_stability"], ["reward_effort", "reward_grasp", "reward_lift", "reward_stability"], ["reward_approach", "reward_grasp", "reward_lift"], ["reward_approach", "reward_grasp", "reward_lift"], []]

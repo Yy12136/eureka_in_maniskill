@@ -1,0 +1,27 @@
+=== 奖励项频率统计 ===
+reward_control: 1.000
+reward_lift: 1.000
+reward_grasp: 1.000
+reward_stability: 0.600
+reward_static: 0.400
+
+=== 样本有用性得分（由小到大排序）===
+样本 2:
+奖励项: ['reward_control', 'reward_grasp', 'reward_lift', 'reward_static']
+有用性得分: 0.193
+样本 4:
+奖励项: ['reward_control', 'reward_grasp', 'reward_lift', 'reward_static']
+有用性得分: 0.193
+样本 0:
+奖励项: ['reward_control', 'reward_grasp', 'reward_lift', 'reward_stability']
+有用性得分: 0.205
+样本 1:
+奖励项: ['reward_control', 'reward_grasp', 'reward_lift', 'reward_stability']
+有用性得分: 0.205
+样本 3:
+奖励项: ['reward_control', 'reward_grasp', 'reward_lift', 'reward_stability']
+有用性得分: 0.205
+
+得分统计：
+标准差: 0.006
+范围: 0.011
