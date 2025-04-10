@@ -106,5 +106,11 @@ I want it to fulfill certain task, here are some tips, tricks and examples:
 ```
 """.rstrip()
 
-PANDA_PROMPT = intro + zero_shot_example + environment_description + additional_knowledge + zero_shot_hint
+PANDA_PROMPT = intro + zero_shot_example + environment_description + additional_knowledge + zero_shot_hint + """
+注意事项：
+1. 奖励函数中的权重项不要超过5个
+2. 每个权重的取值范围建议在[0, 1]之间
+3. 权重变量名应该使用 weight_xxx 的格式
+...
+"""
 PANDA_PROMPT_FOR_FEW_SHOT = intro + zero_shot_example + environment_description + additional_knowledge + few_shot_hint

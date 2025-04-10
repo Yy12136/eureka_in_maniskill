@@ -17,6 +17,19 @@ SPECIFIC_REWARD_TEMPLATE = """
 Generate a specific reward function for the following task:
 {instruction}
 
+Important Note for ManiSkill Environment:
+- Use object.pose.p to get position vector [x, y, z]
+- Use object.pose.q to get rotation quaternion
+- DO NOT use indexing directly on pose objects
+
+Example:
+```python
+# Correct way to access pose
+tcp_pos = self.tcp.pose.p  # position vector
+obj_pos = self.obj.pose.p  # position vector
+distance = np.linalg.norm(tcp_pos - obj_pos)
+```
+
 The reward function should:
 1. Be dense and informative
 2. Guide the robot through each step
@@ -49,8 +62,6 @@ def compute_dense_reward(self, action) -> float:
     
     # Combine all rewards
     reward = weight_a * reward_a + weight_b * reward_b + weight_c * reward_c
-    
-    # Consider adding any necessary regularization or additional terms
     
     return reward
 ```
