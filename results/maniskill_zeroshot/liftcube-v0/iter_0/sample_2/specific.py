@@ -2,16 +2,16 @@ import numpy as np
 
 def compute_dense_reward(self, action) -> float:
     # Define reward weights
-    weight_grasp = 0.45126891882483305
-    weight_lift = 0.4487310811751659
-    weight_static = 0.05000000000000043
-    weight_control = 0.05000000000000053
+    weight_grasp = 0.3
+    weight_lift = 0.4
+    weight_static = 0.2
+    weight_control = 0.1
     
     # Initialize components
-    reward_grasp = 0.0  # Reward for successful grasping
-    reward_lift = 0.0   # Reward for lifting the cube
-    reward_static = 0.0 # Reward for keeping the cube static after lifting
-    reward_control = 0.0 # Reward for minimizing control effort
+    reward_grasp = 0.0  # Reward for successfully grasping the cube
+    reward_lift = 0.0  # Reward for lifting the cube to the desired height
+    reward_static = 0.0  # Reward for keeping the cube static after lifting
+    reward_control = 0.0  # Reward for minimizing control effort
     
     # Get positions
     tcp_pos = self.tcp.pose.p
@@ -24,26 +24,26 @@ def compute_dense_reward(self, action) -> float:
     if self.agent.check_grasp(self.obj):
         reward_grasp = 1.0 - np.tanh(distance)  # Higher reward when closer to the cube
     
-    # Reward for lifting the cube by 0.2 meters
+    # Reward for lifting the cube to 0.2 meters
     target_height = 0.2
     current_height = cube_pos[2] - 0.02
-    if current_height >= target_height:
-        reward_lift = 1.0
-    else:
-        reward_lift = np.tanh(current_height / target_height)  # Gradually increase reward as height increases
+    height_error = abs(current_height - target_height)
+    reward_lift = 1.0 - np.tanh(height_error)  # Higher reward when closer to the target height
     
     # Reward for keeping the cube static after lifting
-    if current_height >= target_height and check_actor_static(self.obj):
+    if check_actor_static(self.obj) and current_height >= target_height:
         reward_static = 1.0
     
     # Reward for minimizing control effort
-    control_effort = np.linalg.norm(self.agent.robot.get_qvel()[:-2]) + np.linalg.norm(action)
-    reward_control = 1.0 / (1.0 + control_effort)  # Higher reward for lower control effort
+    control_effort = np.linalg.norm(action)
+    reward_control = 1.0 - np.tanh(control_effort)  # Higher reward for smaller control effort
     
     # Combine all rewards
-    reward = (weight_grasp * reward_grasp +
-              weight_lift * reward_lift +
-              weight_static * reward_static +
-              weight_control * reward_control)
+    reward = (
+        weight_grasp * reward_grasp +
+        weight_lift * reward_lift +
+        weight_static * reward_static +
+        weight_control * reward_control
+    )
     
     return reward

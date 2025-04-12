@@ -147,7 +147,7 @@ def evaluate_reward_function(task_name, reward_path, train_steps, eval_episodes)
 
     # 返回最后几次评估的平均成功率
     if success_rates:
-        last_n = min(5, len(success_rates))  # 取最后5次的平均
+        last_n = len(success_rates)  # 取all success rate
         avg_success_rate = np.mean(success_rates[-last_n:])
         print("\n最终评估结果:")
         print(f"所有成功率: {[f'{rate:.1%}' for rate in success_rates]}")
@@ -431,7 +431,8 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
         print(f"样本 {score['index']}: 有用性得分 {score['usefulness_score']:.3f}")
     
     # 创建任务特定的迭代目录
-    iter_dir = Path("results/maniskill_zeroshot") / task_name.lower() / f"iteration_{iteration}"
+    base_path = Path("/home/yy/text2reward/results")  # 使用用户目录下的路径
+    iter_dir = base_path / "maniskill_zeroshot" / task_name.lower() / f"iteration_{iteration}"
     os.makedirs(iter_dir, exist_ok=True)
     
     # 保存频率统计和有用性得分
@@ -560,6 +561,8 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
         for name, value in initial_weights_list[sample_idx].items():
             print(f"{name}: {value:.4f}")
         
+        old_value = initial_weights_list[sample_idx][name]
+
         optimizer = optimizers[sample_idx]
         
         best_score = float('-inf')
@@ -616,10 +619,10 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
             # 打印权重变化，使用初始权重作为基准
             print("\n权重更新:")
             for name, value in next_weights.items():
-                initial_value = initial_weights_list[sample_idx][name]
-                old_value = current_weights_list[sample_idx][name]
+                initial_value = initial_weights_list[sample_idx][name]         
                 change_from_initial = ((value - initial_value) / initial_value * 100) if initial_value != 0 else float('inf')
                 change_from_last = ((value - old_value) / old_value * 100) if old_value != 0 else float('inf')
+                old_value = current_weights_list[sample_idx][name]
                 print(f"{name}: {initial_value:.4f} -> {value:.4f} (总变化: {change_from_initial:+.2f}%, 本轮变化: {change_from_last:+.2f}%)")
     
     print("\n2. 最终完整评估...")
@@ -709,7 +712,7 @@ def run_eureka(cfg, task_name, instruction, prompt_template, map_dict, generator
     # 设置默认训练步数
     if not hasattr(cfg, 'train_max_steps'):
         if task_name == "LiftCube-v0":
-            cfg.train_max_steps = 500_00  # 200万步
+            cfg.train_max_steps = 2_000_000  # 200万步
         elif task_name == "PickCube-v0":
             cfg.train_max_steps = 4_000_000  # 400万步
         elif task_name in ["TurnFaucet-v0", "OpenCabinetDrawer-v1"]:

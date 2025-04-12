@@ -9,6 +9,7 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.llms.base import LLM
 from openai import OpenAI
+import numpy as np
 
 from code_generation.post_process.post_process import RewardFunctionConverter
 
@@ -195,7 +196,7 @@ class ZeroShotGenerator:
             )
             
             # 使用不同温度生成多个响应
-            temperatures = [0.0, 0.3, 0.5, 0.7, 1.0]
+            temperatures = self.generate_temperatures(20)
             specific_code = None
             
             for temp in temperatures:
@@ -272,3 +273,27 @@ def compute_dense_reward(self, action) -> float:
         except Exception as e:
             print(f"生成代码出错: {e}")
             return "", ""
+
+    def generate_temperatures(self, num_samples: int, min_temp: float = 0.0, max_temp: float = 1.0) -> List[float]:
+        """生成均匀分布的温度值列表
+        
+        Args:
+            num_samples: 需要的温度样本数量
+            min_temp: 最小温度值 (默认: 0.0)
+            max_temp: 最大温度值 (默认: 1.0)
+        
+        Returns:
+            temperatures: 均匀分布的温度值列表
+        """
+        if num_samples < 1:
+            raise ValueError("样本数量必须大于0")
+        
+        if num_samples == 1:
+            return [min_temp]
+        
+        # 使用linspace生成均匀分布的值
+        temperatures = np.linspace(min_temp, max_temp, num_samples)
+        # 转换为列表并保留4位小数
+        temperatures = [round(float(t), 4) for t in temperatures]
+        
+        return temperatures

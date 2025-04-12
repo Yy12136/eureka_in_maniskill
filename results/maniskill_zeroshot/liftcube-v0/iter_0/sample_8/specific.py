@@ -1,0 +1,49 @@
+import numpy as np
+
+def compute_dense_reward(self, action) -> float:
+    # Define reward weights
+    weight_grasp = 0.3
+    weight_lift = 0.4
+    weight_static = 0.2
+    weight_control = 0.1
+    
+    # Initialize components
+    reward_grasp = 0.0  # Reward for successful grasp
+    reward_lift = 0.0  # Reward for lifting the cube
+    reward_static = 0.0  # Reward for keeping the cube static
+    reward_control = 0.0  # Reward for minimizing control effort
+    
+    # Get positions
+    tcp_pos = self.tcp.pose.p
+    cube_pos = self.obj.pose.p
+    
+    # Calculate distance between TCP and cube
+    distance = np.linalg.norm(tcp_pos - cube_pos)
+    
+    # Grasp reward: Encourage the TCP to be close to the cube
+    reward_grasp = max(0, 1 - distance / (2 * 0.02))
+    
+    # Check if the cube is grasped
+    if self.agent.check_grasp(self.obj):
+        # Lift reward: Encourage lifting the cube by 0.2 meters
+        target_height = 0.2
+        current_height = cube_pos[2] - 0.02
+        reward_lift = max(0, 1 - abs(current_height - target_height) / target_height)
+        
+        # Static reward: Encourage the cube to be static
+        if check_actor_static(self.obj):
+            reward_static = 1.0
+    
+    # Control reward: Minimize control effort
+    control_effort = np.linalg.norm(action)
+    reward_control = max(0, 1 - control_effort / 10.0)
+    
+    # Combine all rewards
+    reward = (
+        weight_grasp * reward_grasp +
+        weight_lift * reward_lift +
+        weight_static * reward_static +
+        weight_control * reward_control
+    )
+    
+    return reward
