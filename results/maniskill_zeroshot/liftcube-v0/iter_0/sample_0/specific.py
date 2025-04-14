@@ -9,9 +9,9 @@ def compute_dense_reward(self, action) -> float:
     
     # Initialize components
     reward_grasp = 0.0  # Reward for successful grasp
-    reward_lift = 0.0  # Reward for lifting the cube
-    reward_static = 0.0  # Reward for keeping the cube static
-    reward_control = 0.0  # Reward for minimizing control effort
+    reward_lift = 0.0   # Reward for lifting the cube
+    reward_static = 0.0 # Reward for keeping the cube static
+    reward_control = 0.0 # Reward for minimizing control effort
     
     # Get positions
     tcp_pos = self.tcp.pose.p
@@ -25,10 +25,11 @@ def compute_dense_reward(self, action) -> float:
         reward_grasp = 1.0 - np.tanh(distance)  # Higher reward if closer to the cube
     
     # Reward for lifting the cube
-    if self.agent.check_grasp(self.obj):
-        target_height = 0.2
-        current_height = cube_pos[2] - 0.02
-        reward_lift = 1.0 - np.tanh(abs(target_height - current_height))
+    target_height = 0.2
+    current_height = cube_pos[2] - 0.02
+    height_diff = target_height - current_height
+    if height_diff > 0:
+        reward_lift = 1.0 - np.tanh(height_diff)  # Higher reward if closer to target height
     
     # Reward for keeping the cube static
     if check_actor_static(self.obj):
@@ -36,7 +37,8 @@ def compute_dense_reward(self, action) -> float:
     
     # Reward for minimizing control effort
     qvel = self.agent.robot.get_qvel()[:-2]
-    reward_control = 1.0 - np.tanh(np.linalg.norm(qvel))
+    control_effort = np.linalg.norm(qvel)
+    reward_control = 1.0 - np.tanh(control_effort)
     
     # Combine all rewards
     reward = (

@@ -20,27 +20,25 @@ def compute_dense_reward(self, action) -> float:
     # Calculate distance between TCP and cube
     distance = np.linalg.norm(tcp_pos - cube_pos)
     
-    # Reward for approaching the cube
-    if distance < 0.1:
-        reward_grasp = 1.0 - np.tanh(10.0 * distance)
-    
-    # Check if the cube is grasped
+    # Reward for successful grasp
     if self.agent.check_grasp(self.obj):
-        reward_grasp = 1.0
-        
-        # Reward for lifting the cube
-        target_height = 0.2
-        current_height = cube_pos[2]
-        height_diff = target_height - current_height
-        reward_lift = 1.0 - np.tanh(10.0 * height_diff)
-        
-        # Reward for keeping the cube static
-        if check_actor_static(self.obj):
-            reward_static = 1.0
+        reward_grasp = 1.0 - np.tanh(distance)  # Higher reward when closer to the cube
+    
+    # Reward for lifting the cube
+    target_height = 0.2
+    current_height = cube_pos[2] - 0.02
+    height_diff = target_height - current_height
+    if self.agent.check_grasp(self.obj):
+        reward_lift = 1.0 - np.tanh(height_diff)  # Higher reward when closer to target height
+    
+    # Reward for keeping the cube static
+    if check_actor_static(self.obj):
+        reward_static = 1.0
     
     # Reward for minimizing control effort
-    control_effort = np.linalg.norm(action)
-    reward_control = 1.0 - np.tanh(control_effort)
+    qvel = self.agent.robot.get_qvel()[:-2]
+    control_effort = np.linalg.norm(qvel)
+    reward_control = 1.0 - np.tanh(control_effort)  # Higher reward for lower control effort
     
     # Combine all rewards
     reward = (

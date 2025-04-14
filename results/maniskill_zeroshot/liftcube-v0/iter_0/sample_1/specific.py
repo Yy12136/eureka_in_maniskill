@@ -8,10 +8,10 @@ def compute_dense_reward(self, action) -> float:
     weight_control = 0.1
     
     # Initialize components
-    reward_grasp = 0.0  # Reward for successful grasp
-    reward_lift = 0.0  # Reward for lifting the cube
-    reward_static = 0.0  # Reward for keeping the cube static
-    reward_control = 0.0  # Reward for smooth control
+    reward_grasp = 0.0  # Reward for successful grasping
+    reward_lift = 0.0   # Reward for lifting the cube by 0.2 meters
+    reward_static = 0.0 # Reward for keeping the cube static after lifting
+    reward_control = 0.0 # Reward for minimizing control effort
     
     # Get positions
     tcp_pos = self.tcp.pose.p
@@ -21,27 +21,31 @@ def compute_dense_reward(self, action) -> float:
     distance = np.linalg.norm(tcp_pos - cube_pos)
     
     # Reward for approaching the cube
-    if distance < 0.1:
-        reward_grasp = 1.0 - distance / 0.1
+    if distance < 0.02 * 2:
+        reward_grasp = 1.0 - distance / (0.02 * 2)
     
     # Check if the cube is grasped
     if self.agent.check_grasp(self.obj):
         reward_grasp = 1.0
         
-        # Reward for lifting the cube
-        target_height = 0.2
+        # Calculate the height difference
+        initial_height = self.obj.pose.p[2]  # Initial z position of the cube
         current_height = cube_pos[2]
-        height_diff = target_height - current_height
-        if height_diff > 0:
-            reward_lift = 1.0 - height_diff / target_height
+        height_diff = current_height - initial_height
         
-        # Reward for keeping the cube static
+        # Reward for lifting the cube
+        if height_diff >= 0.2:
+            reward_lift = 1.0
+        else:
+            reward_lift = height_diff / 0.2
+        
+        # Reward for keeping the cube static after lifting
         if check_actor_static(self.obj):
             reward_static = 1.0
     
-    # Reward for smooth control (minimize velocity)
+    # Reward for minimizing control effort
     qvel = self.agent.robot.get_qvel()[:-2]
-    reward_control = 1.0 - np.linalg.norm(qvel) / 10.0
+    reward_control = 1.0 - np.linalg.norm(qvel) / 10.0  # Normalize by a maximum expected velocity
     
     # Combine all rewards
     reward = (

@@ -119,6 +119,9 @@ if __name__ == '__main__':
     parser.add_argument('--project_name', type=str, default="maniskill")
     parser.add_argument('--exp_name', type=str, default="gen")
     parser.add_argument('--reward_path', type=str, default=None)
+    parser.add_argument('--bo_iter', type=int, default=1)
+    parser.add_argument('--task_iter', type=int, default=1)
+    parser.add_argument('--sample_num', type=int, default=0)  # 添加样本编号参数
 
     args = parser.parse_args()
 
@@ -168,6 +171,7 @@ if __name__ == '__main__':
 
     # set up sac algorithm
     policy_kwargs = dict(net_arch=[256, 256])
+    tb_log_name = f"{args.env_id}_{args.task_iter}_{args.sample_num}_BO_{args.bo_iter}"
     model = SAC("MlpPolicy", env, 
         policy_kwargs=policy_kwargs,
         verbose=1,
@@ -179,7 +183,11 @@ if __name__ == '__main__':
         gradient_steps=4,
         tensorboard_log=f"{BASE_DIR}/tensorboard"
     )
-    model.learn(args.train_max_steps, callback=[eval_callback])
+    model.learn(
+        args.train_max_steps, 
+        callback=[eval_callback],
+        tb_log_name=tb_log_name
+    )
     model.save(f"{BASE_DIR}/models/latest_model_{args.env_id[:-3]}-our")
 
     # set up model evaluation environment

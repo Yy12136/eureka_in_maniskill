@@ -8,9 +8,9 @@ def compute_dense_reward(self, action) -> float:
     weight_control = 0.1
     
     # Initialize components
-    reward_grasp = 0.0  # Reward for successful grasp
-    reward_lift = 0.0  # Reward for lifting the cube
-    reward_static = 0.0  # Reward for keeping the cube static
+    reward_grasp = 0.0  # Reward for successfully grasping the cube
+    reward_lift = 0.0  # Reward for lifting the cube to the desired height
+    reward_static = 0.0  # Reward for keeping the cube static during lifting
     reward_control = 0.0  # Reward for minimizing control effort
     
     # Get positions
@@ -20,27 +20,23 @@ def compute_dense_reward(self, action) -> float:
     # Calculate distance between TCP and cube
     distance = np.linalg.norm(tcp_pos - cube_pos)
     
-    # Reward for getting close to the cube
-    if distance < 0.02:
-        reward_grasp = 1.0 - distance / 0.02
-    
-    # Reward for successful grasp
+    # Reward for grasping the cube
     if self.agent.check_grasp(self.obj):
-        reward_grasp = 1.0
+        reward_grasp = 1.0 - np.tanh(distance)  # Higher reward when closer to the cube
     
-    # Reward for lifting the cube by 0.2 meters
+    # Reward for lifting the cube to 0.2 meters
     target_height = 0.2
-    current_height = cube_pos[2]
-    if self.agent.check_grasp(self.obj):
-        reward_lift = 1.0 - abs(current_height - target_height) / target_height
+    current_height = cube_pos[2] - 0.02
+    height_error = np.abs(target_height - current_height)
+    reward_lift = 1.0 - np.tanh(height_error)  # Higher reward when closer to the target height
     
-    # Reward for keeping the cube static
+    # Reward for keeping the cube static during lifting
     if check_actor_static(self.obj):
-        reward_static = 1.0
+        reward_static = 1.0  # Full reward if the cube is static
     
     # Reward for minimizing control effort
     control_effort = np.linalg.norm(action)
-    reward_control = 1.0 - control_effort / np.linalg.norm(self.agent.robot.get_qvel()[:-2])
+    reward_control = 1.0 - np.tanh(control_effort)  # Higher reward for smaller control effort
     
     # Combine all rewards
     reward = (

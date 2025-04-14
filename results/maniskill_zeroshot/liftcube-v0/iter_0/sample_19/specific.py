@@ -8,35 +8,36 @@ def compute_dense_reward(self, action) -> float:
     weight_control = 0.1
     
     # Initialize components
-    reward_grasp = 0.0  # Reward for successful grasping
+    reward_grasp = 0.0  # Reward for successful grasp
     reward_lift = 0.0  # Reward for lifting the cube
     reward_static = 0.0  # Reward for keeping the cube static
     reward_control = 0.0  # Reward for minimizing control effort
     
     # Get positions
-    tcp_pos = self.tcp.pose.p  # TCP position
-    cube_pos = self.obj.pose.p  # Cube position
+    tcp_pos = self.tcp.pose.p
+    cube_pos = self.obj.pose.p
     
     # Calculate distance between TCP and cube
     distance = np.linalg.norm(tcp_pos - cube_pos)
     
-    # Grasping reward
+    # Reward for approaching the cube
+    reward_grasp = max(0, 1 - distance / (2 * 0.02))
+    
+    # Check if the cube is grasped
     if self.agent.check_grasp(self.obj):
-        reward_grasp = 1.0 - np.tanh(distance)  # Higher reward when closer to the cube
+        reward_grasp = 1.0
+        
+        # Calculate the height difference
+        lift_height = cube_pos[2] - 0.02
+        reward_lift = max(0, min(1, lift_height / 0.2))
+        
+        # Reward for keeping the cube static
+        if check_actor_static(self.obj):
+            reward_static = 1.0
     
-    # Lifting reward
-    target_height = 0.2  # Target height to lift the cube
-    current_height = cube_pos[2]  # Current height of the cube
-    if self.agent.check_grasp(self.obj):
-        reward_lift = 1.0 - np.tanh(abs(target_height - current_height))  # Higher reward when closer to target height
-    
-    # Static reward
-    if check_actor_static(self.obj):
-        reward_static = 1.0  # Full reward if the cube is static
-    
-    # Control effort reward
-    qvel = self.agent.robot.get_qvel()[:-2]
-    reward_control = -np.tanh(np.linalg.norm(qvel))  # Penalize high velocity
+    # Reward for minimizing control effort
+    control_effort = np.linalg.norm(action)
+    reward_control = max(0, 1 - control_effort / 10.0)
     
     # Combine all rewards
     reward = (

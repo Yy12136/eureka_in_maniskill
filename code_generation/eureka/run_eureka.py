@@ -32,7 +32,7 @@ from code_generation.eureka.bayesian_weight_optimizer import BayesianWeightOptim
 # 在主函数开始处
 os.makedirs("temp", exist_ok=True)
 
-def evaluate_reward_function(task_name, reward_path, train_steps, eval_episodes):
+def evaluate_reward_function(task_name, reward_path, train_steps, eval_episodes, bo_iter, task_iter, sample_idx):
     """评估奖励函数"""
     print("\n" + "="*50)
     print(f"开始评估任务: {task_name}")
@@ -51,7 +51,10 @@ def evaluate_reward_function(task_name, reward_path, train_steps, eval_episodes)
             "--max_episode_steps", "100",
             "--rollout_steps", "3200",
             "--train_max_steps", str(train_steps),
-            "--reward_path", os.path.abspath(reward_path)
+            "--reward_path", os.path.abspath(reward_path),
+            "--bo_iter", str(bo_iter),
+            "--task_iter", str(task_iter),
+            "--sample_num", str(sample_idx)
         ]
     else:
         # 使用 SAC 评估
@@ -64,7 +67,10 @@ def evaluate_reward_function(task_name, reward_path, train_steps, eval_episodes)
             "--eval_freq", "16000",
             "--max_episode_steps", "200",
             "--train_max_steps", str(train_steps),
-            "--reward_path", os.path.abspath(reward_path)
+            "--reward_path", os.path.abspath(reward_path),
+            "--bo_iter", str(bo_iter),
+            "--task_iter", str(task_iter),
+            "--sample_num", str(sample_idx)
         ]
     
     print("\n执行命令:")
@@ -577,7 +583,10 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
                 task_name=task_name,
                 reward_path=samples[sample_idx]['reward_path'],
                 train_steps=train_max_steps,
-                eval_episodes=5
+                eval_episodes=5,
+                bo_iter=round_idx + 1,
+                task_iter=iteration,
+                sample_idx=sample_idx
             )
             
             score = result['success_rate']
@@ -637,7 +646,10 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
             task_name=task_name,
             reward_path=samples[i]['reward_path'],
             train_steps=train_max_steps,
-            eval_episodes=10
+            eval_episodes=10,
+            bo_iter=iteration,
+            task_iter=iteration,
+            sample_idx=i
         )
         
         final_results.append({
