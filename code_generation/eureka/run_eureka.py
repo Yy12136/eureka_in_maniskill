@@ -28,6 +28,7 @@ from FlagEmbedding import FlagModel
 from sentence_transformers import SentenceTransformer
 from collections import defaultdict
 from code_generation.eureka.bayesian_weight_optimizer import BayesianWeightOptimizer
+import re
 
 # 在主函数开始处
 os.makedirs("temp", exist_ok=True)
@@ -240,14 +241,15 @@ def find_similar_groups(samples, similarity_matrix, threshold=0.95):
 
 
 def calculate_reward_frequencies(samples):
-    """计算所有样本中每个奖励项的出现频率"""
+    """计算所有样本中每个奖励项的出现频率（使用标准化的奖励项名称）"""
     total_samples = len(samples)
     reward_counts = defaultdict(int)
     
-    # 统计每个奖励项在多少个样本中出现
+    # 统计每个标准化奖励项在多少个样本中出现
     for sample in samples:
-        reward_items = set(sample['reward_items'])  # 使用集合去重
-        for item in reward_items:
+        # 使用已定义的normalize_reward_items函数
+        normalized_items = set(normalize_reward_items(sample['reward_items']))
+        for item in normalized_items:
             reward_counts[item] += 1
     
     # 计算频率并排序
@@ -256,7 +258,6 @@ def calculate_reward_frequencies(samples):
         for item, count in reward_counts.items()
     }
     
-    # 按频率降序排序
     return dict(sorted(frequencies.items(), key=lambda x: x[1], reverse=True))
 
 def analyze_evaluation_results(samples, evaluated_results):
@@ -331,7 +332,7 @@ def perform_ablation_analysis(samples, evaluated_results):
         
         # 综合评估该奖励项
         is_effective = (
-            success_stats['mean'] > 0.5 and  # 成功率阈值
+            success_stats['mean'] > 0.3 and  # 成功率阈值
             reward_stats['mean'] > 0 and     # 平均回报为正
             np.mean(metrics['policy_loss']) < 1.0  # 策略损失阈值
         )
@@ -391,14 +392,14 @@ def calculate_sample_usefulness_scores(samples, reward_frequencies):
     usefulness_scores = []
     
     for idx, sample in enumerate(samples):
-        # 提取该样本使用的奖励项
-        reward_items = extract_reward_items(sample['code'])
+        # 使用已定义的normalize_reward_items函数
+        normalized_items = normalize_reward_items(sample['reward_items'])
         
         # 计算得分：使用(1-频率)的总和
         score = 0.0
-        total_items = len(reward_items)
+        total_items = len(normalized_items)
         if total_items > 0:
-            for item in reward_items:
+            for item in normalized_items:
                 freq = reward_frequencies.get(item, 0.0)
                 score += (1.0 - freq)  # 使用1-频率
             score /= total_items  # 归一化
@@ -406,7 +407,7 @@ def calculate_sample_usefulness_scores(samples, reward_frequencies):
         usefulness_scores.append({
             'index': idx,
             'usefulness_score': score,
-            'reward_items': reward_items
+            'reward_items': normalized_items  # 保存标准化后的奖励项
         })
     
     # 计算统计信息
@@ -462,9 +463,9 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
     total_samples = len(samples)
     reward_counts = defaultdict(int)
     
-    # 统计每个奖励项在多少个样本中出现
+    # 使用normalize_reward_items进行标准化并去重
     for sample in samples:
-        reward_items = set(sample['reward_items'])  # 使用集合去重
+        reward_items = set(normalize_reward_items(sample['reward_items']))
         for item in reward_items:
             reward_counts[item] += 1
     
@@ -551,7 +552,8 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
     optimizers = {}
     current_weights_list = {}
     n_optimization_rounds = 20  # 每个样本的优化轮次
-    
+    final_results = []
+
     # 初始化每个样本的优化器时，保存初始权重
     initial_weights_list = {}
     for i in selected_samples:
@@ -560,20 +562,46 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
         optimizers[i] = BayesianWeightOptimizer(reward_frequencies, initial_weights)
         current_weights_list[i] = initial_weights.copy()
     
+    # 跟踪每个样本的最佳结果
+    if 'best_results' not in locals():
+        best_results = {}
+    
     # 逐个优化每个样本
     for sample_idx in selected_samples:
         print(f"\n开始优化样本 {sample_idx}...")
         print("初始权重:")
-        for name, value in initial_weights_list[sample_idx].items():
-            print(f"{name}: {value:.4f}")
         
-        old_value = initial_weights_list[sample_idx][name]
+        # 检查并打印权重
+        if sample_idx in initial_weights_list and initial_weights_list[sample_idx]:
+            for weight_name, weight_value in initial_weights_list[sample_idx].items():
+                print(f"{weight_name}: {weight_value:.4f}")
+                old_value = weight_value
+        else:
+            print("警告: 未找到初始权重")
+            initial_weights = extract_reward_weights(samples[sample_idx]['code'])
+            initial_weights_list[sample_idx] = initial_weights.copy()
+            for weight_name, weight_value in initial_weights.items():
+                print(f"{weight_name}: {weight_value:.4f}")
+                old_value = weight_value
 
         optimizer = optimizers[sample_idx]
         
         best_score = float('-inf')
         no_improvement_count = 0
         
+        # 创建权重变化记录文件
+        iter_dir = Path(f"/home/yy/text2reward/results/maniskill_zeroshot/{task_name.lower()}/iteration_{iteration}")
+        weight_file = iter_dir / f"sample_{sample_idx}_weight_history.txt"
+        os.makedirs(iter_dir, exist_ok=True)
+        
+        with open(weight_file, 'w') as f:
+            f.write(f"样本 {sample_idx} 权重优化历史\n")
+            f.write("="*50 + "\n\n")
+            f.write("初始权重:\n")
+            for weight_name, weight_value in initial_weights_list[sample_idx].items():
+                f.write(f"{weight_name}: {weight_value:.4f}\n")
+            f.write("\n")
+
         # 对当前样本进行多轮优化
         for round_idx in range(n_optimization_rounds):
             print(f"\n样本 {sample_idx} 优化轮次 {round_idx + 1}/{n_optimization_rounds}")
@@ -583,7 +611,7 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
                 task_name=task_name,
                 reward_path=samples[sample_idx]['reward_path'],
                 train_steps=train_max_steps,
-                eval_episodes=5,
+                eval_episodes=10,
                 bo_iter=round_idx + 1,
                 task_iter=iteration,
                 sample_idx=sample_idx
@@ -598,18 +626,34 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
                 no_improvement_count = 0
             else:
                 no_improvement_count += 1
+
+            # 跟踪每个样本的最佳结果
+            if 'best_results' not in locals():
+                best_results = {}
             
-            # 终止条件：连续两轮没有显著改进
-            if no_improvement_count >= 2:
+            if sample_idx not in best_results or result['success_rate'] > best_results[sample_idx]['success_rate']:
+                best_results[sample_idx] = {
+                    'index': sample_idx,
+                    'success_rate': result['success_rate'],
+                    'mean_reward': result['avg_reward'],
+                    'policy_loss': result['policy_loss'],
+                    'value_loss': result['value_loss'],
+                    'evaluated': True
+                }
+            
+            # 如果是最后一轮或者要提前终止，使用最佳结果
+            if no_improvement_count >= 2 or round_idx == n_optimization_rounds - 1:
                 print(f"样本 {sample_idx} 优化已收敛，提前终止")
+                final_results.append(best_results[sample_idx])
                 break
             
-            # 获取下一组权重
+            
+            # 获取下一组权重并归一化
             next_weights, _ = optimizer.optimize(
                 current_score=score,
                 previous_weights=current_weights_list[sample_idx],
-                beta=2.0,  # 可以根据优化轮次动态调整
-                exploration_weight=0.1 * (1 - round_idx/n_optimization_rounds),  # 随着优化进行逐渐减小探索
+                beta=2.0,
+                exploration_weight=0.1 * (1 - round_idx/n_optimization_rounds),
                 extra_metrics={
                     'avg_reward': result['avg_reward'],
                     'loss': result['policy_loss'],
@@ -617,71 +661,62 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
                 }
             )
             
+            # 确保权重在合理范围内
+            total = sum(next_weights.values())
+            if total > 0:  # 避免除以0
+                next_weights = {k: max(0.0, min(1.0, v/total)) for k, v in next_weights.items()}
+            
             # 更新权重到文件
             updated_code = update_reward_weights(samples[sample_idx]['code'], next_weights)
             with open(samples[sample_idx]['reward_path'], 'w') as f:
                 f.write(updated_code)
             
             # 更新当前权重
-            current_weights_list[sample_idx] = next_weights
+            
             
             # 打印权重变化，使用初始权重作为基准
             print("\n权重更新:")
-            for name, value in next_weights.items():
-                initial_value = initial_weights_list[sample_idx][name]         
-                change_from_initial = ((value - initial_value) / initial_value * 100) if initial_value != 0 else float('inf')
+            for name, value in next_weights.items():       
                 change_from_last = ((value - old_value) / old_value * 100) if old_value != 0 else float('inf')
+                print(f"{name}: {old_value:.4f} -> {value:.4f} 本轮变化: {change_from_last:+.2f}%)")
                 old_value = current_weights_list[sample_idx][name]
-                print(f"{name}: {initial_value:.4f} -> {value:.4f} (总变化: {change_from_initial:+.2f}%, 本轮变化: {change_from_last:+.2f}%)")
-    
-    print("\n2. 最终完整评估...")
-    final_results = []
-    
-    # 直接使用已排序的selected_samples
-    for i in selected_samples:
-        print(f"样本 {i}: 有用性得分 {next(s['usefulness_score'] for s in usefulness_scores if s['index'] == i):.3f}")
-        
-        # 进行最终评估
-        result = evaluate_reward_function(
-            task_name=task_name,
-            reward_path=samples[i]['reward_path'],
-            train_steps=train_max_steps,
-            eval_episodes=10,
-            bo_iter=iteration,
-            task_iter=iteration,
-            sample_idx=i
-        )
-        
-        final_results.append({
-            'index': i,
-            'success_rate': result['success_rate'],
-            'mean_reward': result['avg_reward'],
-            'policy_loss': result['policy_loss'],
-            'value_loss': result['value_loss'],
-            'evaluated': True
-        })
-        
-        print(f"成功率: {result['success_rate']:.3f}")
-        print(f"平均奖励: {result['avg_reward']:.3f}")
+                
+            current_weights_list[sample_idx] = next_weights
+            # 在每轮优化中记录权重变化
+            with open(weight_file, 'a') as f:
+                f.write(f"\n轮次 {round_idx + 1}:\n")
+                current_weights = current_weights_list[sample_idx]
+                for weight_name, weight_value in current_weights.items():
+                    f.write(f"{weight_name}: {weight_value:.4f}\n")
+                f.write("-"*30 + "\n")
+
+            
+
+        # 记录优化结束
+        with open(weight_file, 'a') as f:
+            f.write("\n优化结束\n")
+            f.write(f"最佳成功率: {best_score:.3f}\n")
+            f.write("="*50 + "\n")
+
     
     # 使用现有函数生成分析
     evaluation_feedback = analyze_evaluation_results(
-        [samples[i] for i, _ in enumerate(selected_samples)],
-        final_results
+        [samples[idx] for idx in selected_samples],
+        final_results  # final_results 已经是按selected_samples顺序的结果列表
     )
     print("\n评估反馈:")
     print(evaluation_feedback)
     
     ablation_feedback = perform_ablation_analysis(
-        [samples[i] for i, _ in enumerate(selected_samples)],
-        final_results
+        [samples[idx] for idx in selected_samples],
+        final_results  # final_results 已经是按selected_samples顺序的结果列表
     )
     print("\n消融分析:")
     print(ablation_feedback)
     
     # 生成下一次迭代的提示
     next_iteration_prompt = generate_next_iteration_prompt(
-        [samples[i] for i, _ in enumerate(selected_samples)],
+        [samples[idx] for idx in selected_samples],
         final_results,
         score_std,
         score_range,
@@ -702,11 +737,7 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
         result = {
             'sample_idx': sample_idx,
             'evaluated': True,
-            'success_rate': final_results[sample_idx]['success_rate'],
-            'mean_reward': final_results[sample_idx]['mean_reward'],
-            'policy_loss': final_results[sample_idx]['policy_loss'],
-            'value_loss': final_results[sample_idx]['value_loss'],
-            'reward_items': samples[sample_idx]['reward_items']
+            'success_rate': final_results[sample_idx]['success_rate']
         }
         evaluation_result['results'].append(result)
     
@@ -873,58 +904,51 @@ def file_to_string(filepath):
 
 def extract_reward_items(code_string):
     """从代码中提取奖励项"""
-    reward_items = []
+    reward_items = set()
     lines = code_string.split('\n')
     
-    # 找到各个奖励组件的名称
-    components = set()
-    
-    # 1. 从变量定义和赋值语句中查找
     for line in lines:
+        # 跳过注释行
+        if line.strip().startswith('#'):
+            continue
+            
+        # 如果行中有注释，只处理注释前的部分
+        if '#' in line:
+            line = line.split('#')[0]
+            
         line = line.strip()
-        # 检查变量定义
-        if 'reward_' in line and ('=' in line or '#' in line):
+        
+        # 1. 从变量定义中提取
+        if 'reward_' in line and '=' in line:
             # 提取reward_开头的变量名
-            parts = line.split('=')[0].strip().split()
-            for part in parts:
-                if part.startswith('reward_'):
-                    components.add(part)
+            var_name = line.split('=')[0].strip()
+            if var_name.startswith('reward_') and var_name != 'reward':
+                reward_items.add(var_name)
+        
+        # 2. 从reward计算语句中提取
+        if ('reward =' in line or 'reward=' in line):
+            # 提取所有reward_开头的变量
+            matches = re.findall(r'reward_[a-zA-Z_]+', line)
+            for match in matches:
+                if match != 'reward':
+                    reward_items.add(match)
     
-    # 2. 从reward计算语句中查找
-    in_reward_calc = False
-    reward_expr = []
+    # 3. 从权重定义中确认奖励项
     for line in lines:
-        line = line.strip()
-        # 检测reward计算块的开始
-        if ('reward =' in line or 'reward=' in line) and not line.strip().startswith('#'):
-            in_reward_calc = True
-            reward_expr.append(line)
-        # 继续收集多行reward表达式
-        elif in_reward_calc and ('+' in line or '*' in line):
-            reward_expr.append(line)
-            if line.endswith(')'):  # 检测表达式结束
-                in_reward_calc = False
-        # 检测单行reward表达式结束
-        elif in_reward_calc:
-            reward_expr.append(line)
-            in_reward_calc = False
-    
-    # 3. 从reward表达式中提取组件
-    reward_str = ' '.join(reward_expr)
-    for line in reward_expr:
-        for word in line.split():
-            if word.startswith('reward_') and word.strip('()+-*,') not in components:
-                components.add(word.strip('()+-*,'))
-    
-    # 4. 检查权重定义，确保有对应的reward项
-    for line in lines:
+        if line.strip().startswith('#'):
+            continue
+        if '#' in line:
+            line = line.split('#')[0]
+            
         if 'weight_' in line and '=' in line:
             weight_name = line.split('=')[0].strip()
-            reward_name = 'reward_' + weight_name.replace('weight_', '')
-            if reward_name not in components:
-                components.add(reward_name)
+            # 确保是weight_开头的变量定义
+            if weight_name.startswith('weight_'):
+                reward_name = 'reward_' + weight_name[7:]  # 去掉'weight_'
+                if reward_name != 'reward':
+                    reward_items.add(reward_name)
     
-    return sorted(list(components))
+    return sorted(list(reward_items))
 
 def extract_reward_weights(code_string):
     """从奖励函数代码中提取权重参数"""
@@ -934,68 +958,67 @@ def extract_reward_weights(code_string):
     # 查找权重定义
     for line in lines:
         line = line.strip()
-        if line.startswith('weight_') and '=' in line and '#' not in line:
+        # 跳过注释行
+        if line.startswith('#'):
+            continue
+            
+        # 查找形如 weight_xxx = 0.4 的定义
+        if 'weight_' in line and '=' in line:
             try:
-                var_name = line.split('=')[0].strip()
-                value = float(line.split('=')[1].strip())
-                weights[var_name] = value
-            except:
+                # 分割等号前后
+                parts = line.split('=')
+                var_name = parts[0].strip()
+                
+                # 处理注释和值
+                value_part = parts[1].split('#')[0].strip()
+                
+                # 尝试转换为浮点数
+                try:
+                    value = float(value_part)
+                    weights[var_name] = value
+                    print(f"找到权重: {var_name} = {value}")
+                except ValueError:
+                    print(f"无法转换为浮点数: {value_part}")
+                    continue
+                    
+            except Exception as e:
+                print(f"解析权重失败: {line} - {str(e)}")
                 continue
     
-    return weights 
+    
+    return weights
 
 def update_reward_weights(code: str, new_weights: dict) -> str:
-    """更新奖励函数中的权重值，保持原有的缩进结构"""
+    """更新奖励函数中的权重值"""
     lines = code.split('\n')
     updated_lines = []
     weight_lines_found = set()
-    in_function = False
-    current_indent = ""
-
-    # 标准化权重名称
-    normalized_weights = {}
-    for name, value in new_weights.items():
-        clean_name = name.replace('weight_', '').replace('reward_', '')
-        normalized_weights[f'weight_{clean_name}'] = value
     
     for line in lines:
         original_line = line
         line = line.strip()
         
-        # 检测函数定义
-        if line.startswith('def compute_dense_reward'):
-            in_function = True
-            updated_lines.append(original_line)
-            continue
-            
-        # 获取当前缩进
-        if in_function and line:
-            current_indent = ' ' * (len(original_line) - len(line))
-        
         # 检查是否是权重定义行
-        is_weight_line = False
-        if in_function and '=' in line and '#' not in line:
-            for weight_name, weight_value in normalized_weights.items():
-                if line.startswith(weight_name) and '==' not in line:
-                    new_line = f"{current_indent}{weight_name} = {weight_value}"
+        if "weight_" in line and "=" in line:
+            for weight_name, weight_value in new_weights.items():
+                if weight_name in line:
+                    indent = len(original_line) - len(line)  # 保持原有缩进
+                    # 保留原始注释
+                    comment = line.split('#')[1].strip() if '#' in line else ""
+                    comment_str = f"    # {comment}" if comment else ""
+                    new_line = f"{' ' * indent}{weight_name} = {weight_value:.4f}{comment_str}"
                     updated_lines.append(new_line)
                     weight_lines_found.add(weight_name)
-                    is_weight_line = True
                     break
+            continue
         
-        if not is_weight_line:
-            updated_lines.append(original_line)
-            
-        # 检测函数结束
-        if in_function and line.startswith('return'):
-            in_function = False
-            current_indent = ""
+        updated_lines.append(original_line)
     
     # 检查是否所有权重都已更新
-    if len(weight_lines_found) != len(normalized_weights):
+    if len(weight_lines_found) != len(new_weights):
         print("\n警告: 部分权重未在代码中找到")
         print(f"已找到: {weight_lines_found}")
-        print(f"需要更新: {set(normalized_weights.keys())}")
-        print(f"未找到: {set(normalized_weights.keys()) - weight_lines_found}")
+        print(f"需要更新: {set(new_weights.keys())}")
+        print(f"未找到: {set(new_weights.keys()) - weight_lines_found}")
     
     return '\n'.join(updated_lines) 

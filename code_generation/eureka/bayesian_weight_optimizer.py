@@ -3,6 +3,7 @@ from scipy.optimize import minimize
 from scipy.stats import norm
 import os
 
+
 class BayesianWeightOptimizer:
     def __init__(self, reward_frequencies, initial_weights):
         """

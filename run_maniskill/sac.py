@@ -171,7 +171,7 @@ if __name__ == '__main__':
 
     # set up sac algorithm
     policy_kwargs = dict(net_arch=[256, 256])
-    tb_log_name = f"{args.env_id}_{args.task_iter}_{args.sample_num}_BO_{args.bo_iter}"
+    tb_log_name = f"{args.env_id}_{args.task_iter}_{args.sample_num}_BOiter{args.bo_iter}"
     model = SAC("MlpPolicy", env, 
         policy_kwargs=policy_kwargs,
         verbose=1,

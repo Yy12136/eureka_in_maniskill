@@ -22,50 +22,92 @@ Important Note for ManiSkill Environment:
 - Use object.pose.p to get position vector [x, y, z]
 - Use object.pose.q to get rotation quaternion
 - DO NOT use indexing directly on pose objects
+- Choose between 2 to 5 different reward components
+- The sum of all weights must equal 1.0
+- Use "reward_" prefix for main reward components
+- Optional penalties or bonuses should be added separately after main reward calculation
 
-Example:
-```python
-# Correct way to access pose
-tcp_pos = self.tcp.pose.p  # position vector
-obj_pos = self.obj.pose.p  # position vector
-distance = np.linalg.norm(tcp_pos - obj_pos)
-```
+DO NOT USE:
+- Complex numpy functions (apply, isclose, etc.)
+- Quaternion operations
+- Undefined methods or attributes
 
-The reward function should:
-1. Be dense and informative
-2. Guide the robot through each step
-3. Include specific milestones for the task
-4. Clearly separate different reward components
-5. Sum all reward components at the end
+Here are possible reward component types (choose 2-5):
+1. Task Progress:
+   - Distance rewards: use reward_dist, reward_approach, reward_reach, reward_near
+   - Grasp state: use reward_grasp, reward_grip, reward_hold, reward_contact
+   - Lift progress: use reward_lift, reward_height, reward_elevation, reward_raise
 
-Only use these available variables and methods:
-{available_vars}
+2. Motion Quality:
+   - Motion smoothness: use reward_smooth, reward_effort
+   - Energy efficiency: use reward_energy, reward_effort
+   - Path optimization: use reward_approach, reward_reach
 
-Do NOT use any other variables not listed above.
+3. Stability:
+   - Object orientation: use reward_stable, reward_balance
+   - Motion stability: use reward_steady, reward_smooth
+   - Balance control: use reward_balance, reward_stable
+
+4. Safety:
+   - Collision handling: use reward_contact
+   - Joint control: use reward_effort, reward_smooth
+   - Motion limits: use reward_steady
+
+5. Precision:
+   - Position control: use reward_reach, reward_near
+   - Orientation control: use reward_stable, reward_balance
+   - Movement accuracy: use reward_smooth, reward_steady
+
+Variable Mappings:
+{mappings}
 
 Example format:
 ```python
 def compute_dense_reward(self, action) -> float:
-    # Define reward weights
-    weight_a = 0.4
-    weight_b = 0.3
-    weight_c = 0.3
+    # Define reward weights (total number <= 5)
+    weight_1 = ...    # Choose a primary task weight
+    weight_2 = ...    # Choose a secondary task weight
+    weight_3 = ...    # Choose an additional weight if needed
+    weight_4 = ...    # Optional additional weight
+    weight_5 = ...    # Optional additional weight
+    # Note: weight_1 + weight_2 + ... = 1.0
     
-    # Initialize components
-    reward_a = 0.0  # Component A description
-    reward_b = 0.0  # Component B description
-    reward_c = 0.0  # Component C description
+    # Initialize reward components (total number <= 5)
+    reward_1 = 0.0    # Main reward component
+    reward_2 = 0.0    # Main reward component
+    reward_3 = 0.0    # Main reward component
+    reward_4 = 0.0    # Optional additional reward component
+    reward_5 = 0.0    # Optional additional reward component
+    # Calculate reward components
+    reward_1 = ...    # Implement your chosen reward calculation
+    reward_2 = ...    # Implement your chosen reward calculation
+    reward_3 = ...    # Implement your chosen reward calculation
+    reward_4 = ...    # Implement your chosen reward calculation（optional）
+    reward_5 = ...    # Implement your chosen reward calculation（optional）
     
-    # Calculate each component
-    reward_a = ...
-    reward_b = ...
-    reward_c = ...
+    # Combine main rewards
+    reward = (
+        weight_1 * reward_1 +
+        weight_2 * reward_2 +
+        weight_3 * reward_3 +
+        weight_4 * reward_4 +    # Optional additional reward component
+        weight_5 * reward_5    # Optional additional reward component
+    )
     
-    # Combine all rewards
-    reward = weight_a * reward_a + weight_b * reward_b + weight_c * reward_c
+    # Optional: Additional reward components
+    # 1. Bonus for maintaining cube above goal height
+    # 2. Penalty for large actions (regularization)
     
     return reward
 ```
+
+Important:
+1. Use the correct variable names as specified in the mappings
+2. Use "reward_" prefix for main reward components
+3. Keep penalties/bonuses separate from main reward components
+4. Choose different combinations of components for each sample
+5. Create unique reward structures based on the task
+6. Avoid copying the exact same components for every sample
 """
 
 GENERAL_REWARD_TEMPLATE = """
@@ -192,7 +234,7 @@ class ZeroShotGenerator:
 
             specific_prompt = SPECIFIC_REWARD_TEMPLATE.format(
                 instruction=instruction,
-                available_vars=available_vars
+                mappings=available_vars
             )
             
             # 使用不同温度生成多个响应
@@ -261,6 +303,7 @@ def compute_dense_reward(self, action) -> float:
             # 处理生成的代码
             if specific_code:
                 specific_code = extract_function(specific_code)
+                
                 # 添加代码转换
                 converter = RewardFunctionConverter(map_dict)
                 specific_code = converter.general_to_specific(specific_code)

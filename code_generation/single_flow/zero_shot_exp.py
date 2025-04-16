@@ -68,15 +68,21 @@ instruction_mapping = {
 
 mapping_dicts_mapping = {
     "LiftCube-v0": {
+        "self.cube_A.check_static()": "check_actor_static(self.obj)",
+        "self.cube_A": "self.obj",
         "self.cubeA.check_static()": "check_actor_static(self.obj)",
         "self.cubeA" : "self.obj",
-        "self.robot.ee_pose" : "self.tcp.pose",
-        "self.robot.check_grasp" : "self.agent.check_grasp",
-        "self.cube_half_size" : "0.02",
-        "self.robot.qpos" : "self.agent.robot.get_qpos()[:-2]",
-        "self.robot.qvel" : "self.agent.robot.get_qvel()[:-2]",
+        "self.robot.ee_pose": "self.tcp.pose",
+        "self.robot.check_grasp": "self.agent.check_grasp",
+        "self.cube_half_size": "0.02",
+        "self.robot.qpos": "self.agent.robot.get_qpos()[:-2]",
+        "self.robot.qvel": "self.agent.robot.get_qvel()[:-2]",
+        "self.cube_A.is_grasped": "self.agent.check_grasp(self.obj)",
+        "self.robot.is_grasping": "self.agent.check_grasp", 
     },
     "PickCube-v0": {
+        "self.cube_A.check_static()": "check_actor_static(self.obj)",
+        "self.cube_A": "self.obj",
         "self.cubeA.check_static()": "check_actor_static(self.obj)",
         "self.cubeA" : "self.obj",
         "self.robot.ee_pose" : "self.tcp.pose",
@@ -85,6 +91,8 @@ mapping_dicts_mapping = {
         "self.cube_half_size" : "0.02",
         "self.robot.qpos" : "self.agent.robot.get_qpos()[:-2]",
         "self.robot.qvel" : "self.agent.robot.get_qvel()[:-2]",
+        "self.cube_A.is_grasped": "self.agent.check_grasp(self.obj)",
+        "self.robot.is_grasping": "self.agent.check_grasp", 
     },
     "StackCube-v0": {
         "self.robot.ee_pose": "self.tcp.pose",
@@ -96,6 +104,8 @@ mapping_dicts_mapping = {
         "self.robot.gripper_openness": "self.agent.robot.get_qpos()[-1] / self.agent.robot.get_qlimits()[-1, 1]",
         "self.cubeA.check_static()": "check_actor_static(self.cubeA)",
         "self.cubeB.check_static()": "check_actor_static(self.cubeB)",
+        "self.cube_A.check_static()": "check_actor_static(self.cubeA)",
+        "self.cube_B.check_static()": "check_actor_static(self.cubeB)",
     },
     "TurnFaucet-v0": {
         "self.faucet.handle.target_qpos": "self.target_angle",
