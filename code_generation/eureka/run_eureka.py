@@ -332,7 +332,7 @@ def perform_ablation_analysis(samples, evaluated_results):
         
         # 综合评估该奖励项
         is_effective = (
-            success_stats['mean'] > 0.3 and  # 成功率阈值
+            success_stats['mean'] > 0.2 and  # 成功率阈值
             reward_stats['mean'] > 0 and     # 平均回报为正
             np.mean(metrics['policy_loss']) < 1.0  # 策略损失阈值
         )
@@ -733,11 +733,11 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
     }
     
     # 评估每个样本
-    for sample_idx in selected_samples:
+    for i, sample_idx in enumerate(selected_samples):
         result = {
             'sample_idx': sample_idx,
             'evaluated': True,
-            'success_rate': final_results[sample_idx]['success_rate']
+            'success_rate': final_results[i]['success_rate']  # 使用枚举索引i而不是sample_idx
         }
         evaluation_result['results'].append(result)
     
@@ -859,7 +859,7 @@ def run_eureka(cfg, task_name, instruction, prompt_template, map_dict, generator
             print("2. 已经收敛到稳定的奖励组合")
             print("3. 进一步探索可能收益有限")
             print("\n提前结束迭代")
-            break
+            # break
         
         # 更新历史最佳
         if best_success_rate > history_best_success_rate:

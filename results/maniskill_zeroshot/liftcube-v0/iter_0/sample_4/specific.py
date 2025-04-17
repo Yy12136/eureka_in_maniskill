@@ -2,47 +2,46 @@ import numpy as np
 
 def compute_dense_reward(self, action) -> float:
     # Define reward weights (total number <= 5)
-    weight_approach = 0.4    # Weight for approaching the cube
-    weight_grasp = 0.3       # Weight for successfully grasping the cube
-    weight_lift = 0.3        # Weight for lifting the cube to the desired height
+    weight_grasp = 0.4    # Primary weight for grasping the cube
+    weight_lift = 0.4     # Secondary weight for lifting the cube
+    weight_steady = 0.2   # Additional weight for maintaining stability during lift
     
     # Initialize reward components (total number <= 5)
-    reward_approach = 0.0    # Reward for approaching the cube
-    reward_grasp = 0.0       # Reward for successfully grasping the cube
-    reward_lift = 0.0        # Reward for lifting the cube to the desired height
+    reward_grasp = 0.0    # Reward for successfully grasping the cube
+    reward_lift = 0.0    # Reward for lifting the cube to the target height
+    reward_steady = 0.0   # Reward for maintaining stability during the lift
     
     # Calculate reward components
-    # 1. Reward for approaching the cube
-    ee_pos = self.tcp.pose.p
-    cube_pos = self.obj.pose.p
-    dist_to_cube = max(0, np.linalg.norm(ee_pos - cube_pos) - 0.02)
-    reward_approach = 1.0 - np.tanh(5.0 * dist_to_cube)  # Scale distance to [0, 1]
-    
-    # 2. Reward for successfully grasping the cube
+    # 1. Grasp reward: Check if the cube is grasped
     if self.agent.check_grasp(self.obj):
         reward_grasp = 1.0
     
-    # 3. Reward for lifting the cube to the desired height
+    # 2. Lift reward: Measure how close the cube is to the target height (0.2 meters)
+    target_height = 0.2
+    current_height = self.obj.pose.p[2]  # Z-coordinate of the cube's position
+    height_diff = abs(current_height - target_height)
+    reward_lift = max(0, 1 - height_diff / target_height)  # Normalized reward
+    
+    # 3. Steady reward: Penalize large velocity changes during the lift
     if self.agent.check_grasp(self.obj):
-        cube_height = self.obj.pose.p[2]
-        target_height = 0.2
-        height_diff = max(0, target_height - cube_height)
-        reward_lift = 1.0 - np.tanh(10.0 * height_diff)  # Scale height difference to [0, 1]
+        qvel = self.agent.robot.get_qvel()[:-2]  # Exclude gripper joints
+        velocity_magnitude = sum(abs(v) for v in qvel)
+        reward_steady = max(0, 1 - velocity_magnitude / 10.0)  # Normalized reward
     
     # Combine main rewards
     reward = (
-        weight_approach * reward_approach +
         weight_grasp * reward_grasp +
-        weight_lift * reward_lift
+        weight_lift * reward_lift +
+        weight_steady * reward_steady
     )
     
     # Optional: Additional reward components
     # 1. Bonus for maintaining cube above goal height
-    if self.agent.check_grasp(self.obj) and self.obj.pose.p[2] >= 0.2:
-        reward += 0.1
+    if current_height >= target_height:
+        reward += 0.1  # Small bonus for maintaining height
     
     # 2. Penalty for large actions (regularization)
-    action_penalty = -0.01 * np.linalg.norm(action)
-    reward += action_penalty
+    action_magnitude = sum(abs(a) for a in action)
+    reward -= 0.05 * action_magnitude  # Penalize large actions
     
     return reward

@@ -2,21 +2,21 @@
 ==================================================
 
 初始权重:
-weight_reach: 0.4000
+weight_grasp: 0.4000
 weight_lift: 0.4000
-weight_stable: 0.2000
+weight_effort: 0.2000
 
 
 轮次 1:
-weight_reach: 0.0500
-weight_lift: 0.8000
-weight_stable: 0.1500
+weight_grasp: 0.4750
+weight_lift: 0.4750
+weight_effort: 0.0500
 ------------------------------
 
 轮次 2:
-weight_reach: 0.0500
-weight_lift: 0.5379
-weight_stable: 0.4121
+weight_grasp: 0.4750
+weight_lift: 0.4750
+weight_effort: 0.0500
 ------------------------------
 
 优化结束

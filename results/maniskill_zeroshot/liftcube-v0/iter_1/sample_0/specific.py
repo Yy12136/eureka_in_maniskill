@@ -1,51 +1,49 @@
 import numpy as np
 
 def compute_dense_reward(self, action) -> float:
-    # Initialize reward
-    reward = 0.0
+    # Define reward weights (total number <= 5)
+    weight_grasp = 0.4    # Weight for successfully grasping the cube
+    weight_lift = 0.4     # Weight for lifting the cube to the desired height
+    weight_steady = 0.2   # Weight for maintaining stability during the lift
     
-    # Get positions
-    ee_pos = self.tcp.pose.p
-    obj_pos = self.obj.pose.p
+    # Initialize reward components (total number <= 5)
+    reward_grasp = 0.0    # Reward for grasping the cube
+    reward_lift = 0.0     # Reward for lifting the cube
+    reward_steady = 0.0   # Reward for maintaining stability
     
-    # Check grasp
-    grasp_success = self.agent.check_grasp(self.obj)
+    # Calculate reward components
+    # 1. Reward for grasping the cube
+    if self.agent.check_grasp(self.obj):
+        reward_grasp = 1.0
     
-    # Milestone 1: Move end-effector close to cube A
-    distance_to_cube = np.linalg.norm(ee_pos - obj_pos)
-    proximity_reward = max(0, 1.0 - distance_to_cube / 0.1)  # Normalize by 0.1 meter
-    reward += proximity_reward * 0.3
+    # 2. Reward for lifting the cube to the desired height
+    if self.agent.check_grasp(self.obj):
+        target_height = 0.2
+        cube_pos = self.obj.pose.p
+        current_height = cube_pos[2]
+        height_diff = max(0, target_height - current_height)
+        reward_lift = 1.0 - np.tanh(10.0 * height_diff)  # Scale height difference to [0, 1]
     
-    # Milestone 2: Align end-effector with cube A (orientation matters)
-    ee_z_axis = self.tcp.pose.to_transformation_matrix()[:3, 2]
-    desired_z_axis = np.array([0, 0, -1])  # Assuming the gripper faces downward
-    alignment_error = np.linalg.norm(ee_z_axis - desired_z_axis)
-    alignment_reward = max(0, 1.0 - alignment_error)
-    reward += alignment_reward * 0.2
+    # 3. Reward for maintaining stability during the lift
+    if self.agent.check_grasp(self.obj):
+        # Check if the cube is not moving significantly (stable)
+        cube_velocity = np.linalg.norm(self.obj.velocity)
+        reward_steady = 1.0 - np.tanh(5.0 * cube_velocity)  # Scale velocity to [0, 1]
     
-    # Milestone 3: Grasp cube A
-    if grasp_success:
-        reward += 1.0
+    # Combine main rewards
+    reward = (
+        weight_grasp * reward_grasp +
+        weight_lift * reward_lift +
+        weight_steady * reward_steady
+    )
     
-    # Milestone 4: Lift cube A by 0.2 meter
-    if grasp_success:
-        target_height = obj_pos[2] + 0.2
-        current_height = obj_pos[2]
-        height_diff = abs(target_height - current_height)
-        lift_reward = max(0, 1.0 - height_diff / 0.2)  # Normalize by 0.2 meter
-        reward += lift_reward * 0.3
+    # Optional: Additional reward components
+    # 1. Bonus for maintaining cube above goal height
+    if self.agent.check_grasp(self.obj) and cube_pos[2] >= target_height:
+        reward += 0.1  # Small bonus for maintaining the height
     
-    # Milestone 5: Ensure cube A is static after lifting
-    if grasp_success and check_actor_static(self.obj):
-        reward += 1.0
-    
-    # Penalize large actions to encourage smooth motion
+    # 2. Penalty for large actions (regularization)
     action_penalty = -0.01 * np.linalg.norm(action)
     reward += action_penalty
-    
-    # Penalize collisions or excessive velocity
-    qvel = self.agent.robot.get_qvel()[:-2]
-    velocity_penalty = -0.001 * np.linalg.norm(qvel)
-    reward += velocity_penalty
     
     return reward

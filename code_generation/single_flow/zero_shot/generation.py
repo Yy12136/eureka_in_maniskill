@@ -108,6 +108,8 @@ Important:
 4. Choose different combinations of components for each sample
 5. Create unique reward structures based on the task
 6. Avoid copying the exact same components for every sample
+7. Use descriptive names for weights and rewards
+8. Keep weights and reward names consistent
 """
 
 GENERAL_REWARD_TEMPLATE = """

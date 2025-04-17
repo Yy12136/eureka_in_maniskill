@@ -7,7 +7,6 @@ save_dir: "results"  # 保存结果的目录
 
 model:
   name: "deepseek-v3-241226"
-  temperature: 0.7
 
 # 基本配置
 iteration: 10  # 总迭代次数

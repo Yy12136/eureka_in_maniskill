@@ -189,7 +189,9 @@ def main(eureka_cfg):
         
         # 保存最佳结果
         if best_code is not None:
-            results_dir = Path("/home/yy/text2reward/results") / task_name.lower()
+            results_dir = Path("/home/yy/text2reward/results/maniskill_zero_shot") / task_name.lower()
+            results_dir.mkdir(parents=True, exist_ok=True)  # 创建目录
+            
             with open(results_dir / "best_reward.py", "w") as f:
                 f.write(best_code)
             print(f"\n任务 {task_name} 的最佳奖励函数已保存 (reward: {best_reward:.3f})")
