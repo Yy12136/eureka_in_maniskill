@@ -188,7 +188,7 @@ if __name__ == '__main__':
         callback=[eval_callback],
         tb_log_name=tb_log_name
     )
-    model.save(f"{BASE_DIR}/models/latest_model_{args.env_id[:-3]}-our")
+    model.save(f"{BASE_DIR}/models/{tb_log_name}")
 
     # set up model evaluation environment
     eval_env.close()
@@ -206,7 +206,7 @@ if __name__ == '__main__':
     # os.makedirs(f"{wandb.run.dir}/video/{run.id}", exist_ok=True)
     # os.system(f"cp -r {record_dir} {wandb.run.dir}/video/{run.id}")
 
-    success = np.array(ep_lens) < eval_env.env.env._max_episode_steps
+    success = np.array(ep_lens) < args.max_episode_steps
     success_rate = success.mean()
     print(f"Success Rate: {success_rate}")
     print(f"Episode Lengths: {ep_lens}")

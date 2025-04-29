@@ -1,36 +1,37 @@
 import numpy as np
 
 def compute_dense_reward(self, action) -> float:
-                # Initialize reward
-                reward = 0.0
-                
-                # Get positions
-                ee_pos = self.tcp.pose.p
-                obj_pos = self.obj.pose.p
-                
-                # Check grasp
-                grasp_success = self.agent.check_grasp(self.obj)
-                
-                # Step 1: Move end-effector close to the object
-                if not grasp_success:
-                    distance_to_obj = np.linalg.norm(ee_pos - obj_pos)
-                    reward += 1.0 / (1.0 + distance_to_obj)  # Encourage proximity
-                
-                # Step 2: Grasp the object
-                if grasp_success:
-                    reward += 10.0  # Large reward for successful grasp
-                
-                # Step 3: Move the object to the goal position
-                if grasp_success:
-                    distance_to_goal = np.linalg.norm(obj_pos - self.goal_pos)
-                    reward += 1.0 / (1.0 + distance_to_goal)  # Encourage moving towards goal
-                
-                # Step 4: Place the object at the goal position
-                if grasp_success and np.linalg.norm(obj_pos - self.goal_pos) < 0.01:
-                    reward += 20.0  # Large reward for placing the object at the goal
-                
-                # Penalize large joint velocities for smooth motion
-                joint_velocities = self.agent.robot.get_qvel()[:-2]
-                reward -= 0.01 * np.linalg.norm(joint_velocities)  # Penalize high velocities
-                
-                return reward
+    # Define reward weights (total number <= 5)
+    weight_grasp = 0.3          # Weight for successful grasp
+    weight_distance_to_goal = 0.5  # Weight for minimizing distance to goal
+    weight_action_regularization = 0.2  # Weight for action regularization
+    
+    # Initialize reward components (total number <= 5)
+    reward_grasp = 0.0          # Reward for successful grasp
+    reward_distance_to_goal = 0.0  # Reward for minimizing distance to goal
+    reward_action_regularization = 0.0  # Reward for action regularization
+    
+    # Calculate reward components
+    # 1. Grasp reward (binary reward for successful grasp)
+    if self.agent.check_grasp(self.obj):
+        reward_grasp = 1.0
+    
+    # 2. Distance to goal reward (negative distance to encourage minimizing it)
+    distance_to_goal = np.linalg.norm(self.obj.pose.p - self.goal_pos)
+    reward_distance_to_goal = -distance_to_goal
+    
+    # 3. Action regularization (penalize large actions for stability)
+    reward_action_regularization = -np.square(action).sum()
+    
+    # Combine main rewards
+    reward = (
+        weight_grasp * reward_grasp +
+        weight_distance_to_goal * reward_distance_to_goal +
+        weight_action_regularization * reward_action_regularization
+    )
+    
+    # Optional: success bonus (if cube is at the goal position)
+    if distance_to_goal < 0.01:  # Threshold for success
+        reward += 1.0  # Success bonus
+    
+    return reward

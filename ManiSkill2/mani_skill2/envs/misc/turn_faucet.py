@@ -319,14 +319,27 @@ class TurnFaucetEnv(TurnFaucetBaseEnv):
 
     def _get_obs_extra(self) -> OrderedDict:
         obs = OrderedDict(
-            tcp_pose=vectorize_pose(self.tcp.pose),
-            target_angle_diff=self.target_angle_diff,
-            target_joint_axis=self.target_joint_axis,
-            target_link_pos=self.target_link_pos,
+            tcp_pose=vectorize_pose(self.tcp.pose),  # 7维：[x,y,z, qw,qx,qy,qz]
+            target_angle_diff=self.target_angle_diff,  # 标量：目标旋转角度
+            target_joint_axis=self.target_joint_axis,  # 3维：旋转轴方向向量
+            target_link_pos=self.target_link_pos,  # 3维：[x,y,z]
         )
         if self._obs_mode in ["state", "state_dict"]:
             angle_dist = self.target_angle - self.current_angle
             obs["angle_dist"] = angle_dist
+        
+        # 打印观测值信息
+        print("\n=== 观测值详情 ===")
+        print(f"末端执行器位姿 (tcp_pose):")
+        print(f"- 位置 [x,y,z]: {obs['tcp_pose'][:3]}")
+        print(f"- 四元数 [w,x,y,z]: {obs['tcp_pose'][3:]}")
+        print(f"目标旋转角度差: {obs['target_angle_diff']:.4f} rad")
+        print(f"旋转轴方向: {obs['target_joint_axis']}")
+        print(f"把手位置 [x,y,z]: {obs['target_link_pos']}")
+        if 'angle_dist' in obs:
+            print(f"当前角度差: {obs['angle_dist']:.4f} rad")
+        print("="*30)
+        
         return obs
 
     @property

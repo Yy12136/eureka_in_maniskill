@@ -1,47 +1,38 @@
 import numpy as np
 
 def compute_dense_reward(self, action) -> float:
-    # Initialize reward
-    reward = 0.0
+    # Define reward weights (total number <= 5)
+    weight_grasp = 0.0500    # Weight for successful grasp
+    weight_distance_to_goal = 0.1500    # Weight for minimizing distance to goal
+    weight_distance_to_cube = 0.8000    # Weight for minimizing distance to cube
     
-    # Get positions
-    ee_pos = self.tcp.pose.p
-    obj_pos = self.obj.pose.p
+    # Initialize reward components (total number <= 5)
+    reward_grasp = 0.0          # Reward for successful grasp
+    reward_distance_to_goal = 0.0  # Reward for minimizing distance to goal
+    reward_distance_to_cube = 0.0  # Reward for minimizing distance to cube
     
-    # Check grasp
-    grasp_success = self.agent.check_grasp(self.obj)
+    # Calculate reward components
+    # 1. Grasp reward (binary reward for successful grasp)
+    if self.agent.check_grasp(self.obj):
+        reward_grasp = 1.0
     
-    # Milestone 1: Reach the object
-    distance_to_obj = np.linalg.norm(ee_pos - obj_pos)
-    reward += max(0, 1.0 - 0.5 * distance_to_obj)  # Encourage moving closer to the object
+    # 2. Distance to goal reward (negative distance to encourage minimizing it)
+    distance_to_goal = np.linalg.norm(self.obj.pose.p - self.goal_pos)
+    reward_distance_to_goal = -distance_to_goal
     
-    # Milestone 2: Grasp the object
-    if grasp_success:
-        reward += 1.0  # Reward for successful grasp
-    else:
-        # Penalize being close to the object without grasping
-        if distance_to_obj < 0.1:
-            reward -= 0.5
+    # 3. Distance to cube reward (negative distance to encourage minimizing it)
+    distance_to_cube = np.linalg.norm(self.tcp.pose.p - self.obj.pose.p)
+    reward_distance_to_cube = -distance_to_cube
     
-    # Milestone 3: Move the object to the goal
-    if grasp_success:
-        distance_to_goal = np.linalg.norm(obj_pos - self.goal_pos)
-        reward += max(0, 2.0 - 0.5 * distance_to_goal)  # Encourage moving the object closer to the goal
-        
-        # Bonus for reaching the goal
-        if distance_to_goal < 0.05:
-            reward += 2.0
+    # Combine main rewards
+    reward = (
+        weight_grasp * reward_grasp +
+        weight_distance_to_goal * reward_distance_to_goal +
+        weight_distance_to_cube * reward_distance_to_cube
+    )
     
-    # Milestone 4: Keep the object stable during movement
-    if grasp_success:
-        obj_velocity = np.linalg.norm(self.obj.pose.v)
-        reward -= 0.1 * obj_velocity  # Penalize high object velocity
-    
-    # Penalize large joint velocities to encourage smooth motion
-    joint_velocities = self.agent.robot.get_qvel()[:-2]
-    reward -= 0.01 * np.linalg.norm(joint_velocities)
-    
-    # Penalize large actions to encourage efficient movement
-    reward -= 0.01 * np.linalg.norm(action)
+    # Optional: success bonus (if cube is at the goal position)
+    if distance_to_goal < 0.01:  # Threshold for success
+        reward += 1.0  # Success bonus
     
     return reward

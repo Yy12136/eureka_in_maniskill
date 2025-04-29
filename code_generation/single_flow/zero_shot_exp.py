@@ -197,6 +197,15 @@ def main(eureka_cfg):
             print(f"\n任务 {task_name} 的最佳奖励函数已保存 (reward: {best_reward:.3f})")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--TASK', type=str, default='LiftCube-v0', 
+                      choices=task_list,
+                      help='任务名称')
+    args = parser.parse_args()
+    
     config_path = os.path.join(os.path.dirname(__file__), "config/eureka.yaml")
     eureka_cfg = OmegaConf.load(config_path)
+    
+    # 修改main函数只运行指定任务
+    task_list = [args.TASK]  # 覆盖原有的task_list
     main(eureka_cfg)

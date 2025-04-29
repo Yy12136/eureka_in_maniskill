@@ -9,8 +9,8 @@ model:
   name: "deepseek-v3-241226"
 
 # 基本配置
-iteration: 10  # 总迭代次数
-sample: 20     # 每次迭代的样本数
+iteration: 5  # 总迭代次数
+sample: 3     # 每次迭代的样本数
 max_iterations: 1000  # 每个样本的最大训练步数
 use_wandb: false     # 是否使用 wandb 记录
 headless: true      # 是否使用无头模式

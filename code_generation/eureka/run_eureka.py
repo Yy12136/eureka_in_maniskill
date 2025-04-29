@@ -33,7 +33,7 @@ import re
 # 在主函数开始处
 os.makedirs("temp", exist_ok=True)
 
-def evaluate_reward_function(task_name, reward_path, train_steps, eval_episodes, bo_iter, task_iter, sample_idx):
+def evaluate_reward_function(task_name, reward_path, train_steps, eval_episodes, bo_iter, task_iter, sample_idx, weight_file):
     """评估奖励函数"""
     print("\n" + "="*50)
     print(f"开始评估任务: {task_name}")
@@ -71,7 +71,10 @@ def evaluate_reward_function(task_name, reward_path, train_steps, eval_episodes,
             "--reward_path", os.path.abspath(reward_path),
             "--bo_iter", str(bo_iter),
             "--task_iter", str(task_iter),
-            "--sample_num", str(sample_idx)
+            "--sample_num", str(sample_idx),
+            "--seed", "0",
+            "--eval_seed", "1",
+            "--exp_name", "zero-shot"
         ]
     
     print("\n执行命令:")
@@ -154,11 +157,18 @@ def evaluate_reward_function(task_name, reward_path, train_steps, eval_episodes,
 
     # 返回最后几次评估的平均成功率
     if success_rates:
-        last_n = len(success_rates)  # 取all success rate
+        last_n = 100 # 取all success rate
         avg_success_rate = np.mean(success_rates[-last_n:])
         print("\n最终评估结果:")
         print(f"所有成功率: {[f'{rate:.1%}' for rate in success_rates]}")
         print(f"最后 {last_n} 次平均成功率: {avg_success_rate:.1%}")
+        
+        # 在weight_file中追加写入成功率信息
+        with open(weight_file, 'a') as f:
+            f.write(f"\n成功率评估结果:\n")
+            f.write(f"所有成功率: {[f'{rate:.1%}' for rate in success_rates]}\n")
+            f.write(f"平均成功率: {avg_success_rate:.1%}\n")
+            f.write("-" * 50 + "\n")  # 添加分隔线
         return {
             'success_rate': avg_success_rate,
             'avg_reward': np.mean(training_metrics['ep_rew_mean']) if training_metrics['ep_rew_mean'] else 0.0,
@@ -183,16 +193,81 @@ def evaluate_reward_function(task_name, reward_path, train_steps, eval_episodes,
 def get_reward_mapping():
     """定义奖励项的同义词映射"""
     return {
-        # 距离/接近相关
-        'reward_distance': ['reward_dist', 'reward_approach', 'reward_reach', 'reward_near'],
+        # 末端执行器到目标的距离
+        'reward_distance_ee': [
+            'reward_dist_gripper_cube', 'reward_handle_reach', 'reward_handle_distance',
+            'reward_distance_to_cube', 'reward_distance_to_handle',
+            'dist_gripper_cube', 'reward_reach', 'reward_approach',
+            'reward_near', 'dist_to_handle', 'reward_gripper_handle_dist',
+            'reward_gripper_alignment'
+        ],
+        
+        # 物体到目标的距离
+        'reward_distance_obj': [
+            'reward_dist_cube_goal', 'reward_distance_to_goal',
+            'dist_cube_goal', 'dist_to_target',
+            'reward_distance_to_target', 'reward_dist',
+            'distance_reward', 'dist_reward'
+        ],
+        
         # 抓取相关
-        'reward_grasp': ['reward_grip', 'reward_hold', 'reward_contact'],
-        # 提升相关
-        'reward_lift': ['reward_height', 'reward_elevation', 'reward_raise', 'reward_up'],
+        'reward_grasp': [
+            'reward_grip', 'reward_hold', 'reward_contact', 'reward_grasp_handle',
+            'grasp_handle_reward', 'grasp_reward', 'reward_grasping_cube',
+            'grasp_success_reward', 'reward_grasp', 'grasping_reward',
+            'reward_grasp_success', 'reward_grasp_state'
+        ],
+        
+        # 任务进度相关
+        'reward_progress': [
+            'reward_progress', 'reward_handle_progress', 'reward_qpos_progress',
+            'reward_task_progress', 'reward_goal_progress', 'progress_reward',
+            'reward_handle_rotation', 'reward_rotation', 'rotation_reward'
+        ],
+        
+        # 目标相关
+        'reward_goal': [
+            'reward_lift', 'reward_height', 'reward_elevation', 'reward_raise',
+            'reward_target', 'goal_reward', 'target_reward',
+            'qpos_reward', 'reward_goal_achievement'
+        ],
+        
         # 稳定性相关
-        'reward_stability': ['reward_stable', 'reward_balance', 'reward_steady'],
-        # 控制相关
-        'reward_control': ['reward_effort', 'reward_energy', 'reward_smooth'],
+        'reward_stability': [
+            'reward_stable', 'reward_balance', 'reward_steady', 'reward_tilt',
+            'static_reward', 'stability_reward', 'balance_reward',
+            'reward_orientation', 'reward_object_stability', 'reward_static_state'
+        ],
+        
+        # 动作控制相关
+        'reward_control': [
+            'reward_effort', 'reward_energy', 'reward_smooth', 'reward_action',
+            'reward_reg', 'action_reward', 'action_penalty', 'control_reward',
+            'effort_reward', 'smoothness_reward', 'reward_action_regularization',
+            'reward_action_smooth', 'reward_control_effort', 'reward_action_reg',
+            'reward_motion_control'
+        ],
+        
+        # 速度相关
+        'reward_velocity': [
+            'reward_vel', 'velocity_reward', 'speed_reward', 'movement_reward',
+            'reward_motion', 'motion_reward', 'reward_velocity_control',
+            'reward_speed_control', 'reward_movement_speed'
+        ],
+        
+        # 任务完成相关
+        'reward_success': [
+            'success_reward', 'completion_reward', 'task_reward',
+            'achievement_reward', 'bonus_reward', 'reward_task_completion',
+            'reward_goal_reached', 'reward_success_bonus'
+        ],
+        
+        # 安全性相关
+        'reward_safety': [
+            'collision_penalty', 'safety_reward', 'constraint_reward',
+            'limit_reward', 'boundary_reward', 'reward_safety_constraint',
+            'reward_collision_avoidance', 'reward_joint_limits'
+        ]
     }
 
 def normalize_reward_items(reward_items):
@@ -551,7 +626,7 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
     # 为每个选中的样本创建独立的优化器
     optimizers = {}
     current_weights_list = {}
-    n_optimization_rounds = 20  # 每个样本的优化轮次
+    n_optimization_rounds = 10  # 每个样本的优化轮次
     final_results = []
 
     # 初始化每个样本的优化器时，保存初始权重
@@ -614,7 +689,8 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
                 eval_episodes=10,
                 bo_iter=round_idx + 1,
                 task_iter=iteration,
-                sample_idx=sample_idx
+                sample_idx=sample_idx,
+                weight_file=weight_file
             )
             
             score = result['success_rate']
@@ -653,34 +729,47 @@ def evaluate_samples(samples, iteration, task_name, train_max_steps):
                 current_score=score,
                 previous_weights=current_weights_list[sample_idx],
                 beta=2.0,
-                exploration_weight=0.1 * (1 - round_idx/n_optimization_rounds),
-                extra_metrics={
-                    'avg_reward': result['avg_reward'],
-                    'loss': result['policy_loss'],
-                    'value_loss': result['value_loss']
-                }
+                exploration_weight=0.1 * (1 - round_idx/n_optimization_rounds)
             )
             
-            # 确保权重在合理范围内
-            total = sum(next_weights.values())
-            if total > 0:  # 避免除以0
-                next_weights = {k: max(0.0, min(1.0, v/total)) for k, v in next_weights.items()}
+            if score == 0:
+                # 增加随机扰动
+                for key in next_weights:
+                    next_weights[key] += np.random.uniform(-0.1, 0.1)
+                
+                # 确保权重在合理范围内并归一化
+                total = sum(next_weights.values())
+                if total > 0:
+                    next_weights = {k: max(0.0, min(1.0, v/total)) for k, v in next_weights.items()}
             
+            # 检查权重是否有显著变化
+            weights_changed = False
+            for key in next_weights:
+                if abs(next_weights[key] - current_weights_list[sample_idx][key]) > 0.01:  # 1%的变化阈值
+                    weights_changed = True
+                    break
+            
+            if not weights_changed:
+                no_change_count += 1
+                print(f"\n权重连续 {no_change_count} 轮未发生显著变化")
+                if no_change_count >= 1:  # 连续1轮权重没有变化
+                    print("权重已稳定，提前终止优化")
+                    break
+            else:
+                no_change_count = 0  # 重置计数器
+
             # 更新权重到文件
             updated_code = update_reward_weights(samples[sample_idx]['code'], next_weights)
             with open(samples[sample_idx]['reward_path'], 'w') as f:
                 f.write(updated_code)
             
-            # 更新当前权重
-            
-            
-            # 打印权重变化，使用初始权重作为基准
+            # 打印权重变化，使用当前权重作为基准
             print("\n权重更新:")
-            for name, value in next_weights.items():       
+            for name, value in next_weights.items():
+                old_value = current_weights_list[sample_idx][name]  # 先获取旧值
                 change_from_last = ((value - old_value) / old_value * 100) if old_value != 0 else float('inf')
-                print(f"{name}: {old_value:.4f} -> {value:.4f} 本轮变化: {change_from_last:+.2f}%)")
-                old_value = current_weights_list[sample_idx][name]
-                
+                print(f"{name}: {old_value:.4f} -> {value:.4f} (变化: {change_from_last:+.2f}%)")
+
             current_weights_list[sample_idx] = next_weights
             # 在每轮优化中记录权重变化
             with open(weight_file, 'a') as f:
@@ -755,9 +844,9 @@ def run_eureka(cfg, task_name, instruction, prompt_template, map_dict, generator
     # 设置默认训练步数
     if not hasattr(cfg, 'train_max_steps'):
         if task_name == "LiftCube-v0":
-            cfg.train_max_steps = 2_000_000  # 200万步
+            cfg.train_max_steps = 10_000  # 200万步
         elif task_name == "PickCube-v0":
-            cfg.train_max_steps = 4_000_000  # 400万步
+            cfg.train_max_steps = 10_000  # 400万步
         elif task_name in ["TurnFaucet-v0", "OpenCabinetDrawer-v1"]:
             cfg.train_max_steps = 4_000_000  # 400万步
         elif task_name in ["OpenCabinetDoor-v1", "PushChair-v1"]:
@@ -852,14 +941,14 @@ def run_eureka(cfg, task_name, instruction, prompt_template, map_dict, generator
                 print(f"已保存最佳奖励函数")
         
         # 检查是否需要停止迭代
-        if evaluation_result['score_std'] < 0.05 and evaluation_result['score_range'] < 0.1:
+        if evaluation_result['score_std'] < 0.02 and evaluation_result['score_range'] < 0.1:
             print("\n检测到样本得分收敛（标准差<0.05，范围<0.1）")
             print("原因：")
             print("1. 所有样本的有用性得分非常接近")
             print("2. 已经收敛到稳定的奖励组合")
             print("3. 进一步探索可能收益有限")
             print("\n提前结束迭代")
-            # break
+            break
         
         # 更新历史最佳
         if best_success_rate > history_best_success_rate:

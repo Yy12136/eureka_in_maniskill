@@ -49,13 +49,13 @@ class BayesianWeightOptimizer:
         return k
     
     def acquisition_function(self, x, X, y, beta=2.0):
-        """Upper Confidence Bound (UCB) 采集函数"""
+        """Expected Improvement (EI) 采集函数"""
         if len(X) == 0:
             return 1.0
             
         # 计算均值和方差
         K = np.array([[self.kernel(x1, x2) for x2 in X] for x1 in X])
-        K = K + 1e-6 * np.eye(len(X))
+        K = K + 1e-6 * np.eye(len(X))  # 添加小的对角项以提高数值稳定性
         
         k = np.array([self.kernel(x, x2) for x2 in X])
         K_inv = np.linalg.inv(K)
@@ -68,9 +68,16 @@ class BayesianWeightOptimizer:
             
         sigma = np.sqrt(sigma2)
         
-        # UCB = μ + β * σ
-        ucb = mu + beta * sigma
-        return ucb
+        # 计算当前最优值
+        y_star = np.max(y)
+        
+        # 计算z值
+        z = (mu - y_star) / sigma
+        
+        # 计算EI值
+        ei = sigma * (z * norm.cdf(z) + norm.pdf(z))
+        
+        return float(max(0, ei))
     
     def optimize(self, current_score=None, previous_weights=None, beta=2.0, exploration_weight=0.1, 
                 extra_metrics=None):
@@ -100,11 +107,6 @@ class BayesianWeightOptimizer:
             self.X.append(current_weights.tolist())
             self.y.append(current_score)
             
-            # 存储额外指标
-            if extra_metrics:
-                if not hasattr(self, 'extra_metrics_history'):
-                    self.extra_metrics_history = []
-                self.extra_metrics_history.append(extra_metrics)
         
         # 确保数据维度正确
         X = np.array(self.X, dtype=np.float64)
@@ -121,17 +123,6 @@ class BayesianWeightOptimizer:
                 exploration_term = -exploration_weight * np.sum((x - prev_weights_array)**2)
                 acquisition_value += exploration_term
                 
-                # 如果有额外指标历史，使用它们来调整目标函数
-                if hasattr(self, 'extra_metrics_history') and self.extra_metrics_history:
-                    last_metrics = self.extra_metrics_history[-1]
-                    # 根据损失值调整探索
-                    if last_metrics['loss'] > 0:
-                        loss_penalty = last_metrics['loss'] * 0.1
-                        acquisition_value -= loss_penalty
-                    # 根据值函数损失调整
-                    if last_metrics['value_loss'] > 0:
-                        value_loss_penalty = last_metrics['value_loss'] * 0.1
-                        acquisition_value -= value_loss_penalty
             
             return acquisition_value
         

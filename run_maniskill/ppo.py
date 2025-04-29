@@ -171,7 +171,7 @@ if __name__ == '__main__':
         callback=[eval_callback],
         tb_log_name=tb_log_name
     )
-    model.save(f"{BASE_DIR}/models/latest_model_{args.env_id[:-3]}-our")
+    model.save(f"{BASE_DIR}/models/{tb_log_name}")
 
     # set up model evaluation environment
     eval_env.close()

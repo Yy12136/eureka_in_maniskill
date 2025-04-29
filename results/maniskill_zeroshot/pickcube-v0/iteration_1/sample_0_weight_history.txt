@@ -1,0 +1,24 @@
+样本 0 权重优化历史
+==================================================
+
+初始权重:
+weight_grasp: 0.4000
+weight_distance_to_goal: 0.5000
+weight_distance_to_cube: 0.1000
+
+
+轮次 1:
+weight_grasp: 0.6226
+weight_distance_to_goal: 0.0500
+weight_distance_to_cube: 0.3274
+------------------------------
+
+轮次 2:
+weight_grasp: 0.0500
+weight_distance_to_goal: 0.1500
+weight_distance_to_cube: 0.8000
+------------------------------
+
+优化结束
+最佳成功率: 0.102
+==================================================
